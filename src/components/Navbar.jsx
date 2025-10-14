@@ -1,9 +1,14 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const profileDropdownRef = useRef(null);
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -15,6 +20,46 @@ const Navbar = () => {
     { name: "My Tickets", path: "/tickets" },
     { name: "About Us", path: "/about" },
   ];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  // If not authenticated, redirect to login
+  if (!isAuthenticated && !isLoading) {
+    navigate("/login");
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <header className="sticky top-0 z-50 bg-background-dark/95 backdrop-blur-sm border-b border-gray-700/50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-background-dark/95 backdrop-blur-sm border-b border-gray-700/50">
@@ -82,15 +127,117 @@ const Navbar = () => {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
 
-            {/* Profile */}
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-blue-600 p-0.5">
-              <div
-                className="h-full w-full rounded-full bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    'url("https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face")',
-                }}
-              />
+            {/* Profile Dropdown */}
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800/50 transition-colors"
+              >
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-blue-600 p-0.5">
+                  <div
+                    className="h-full w-full rounded-full bg-cover bg-center"
+                    style={{
+                      backgroundImage:
+                        'url("https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face")',
+                    }}
+                  />
+                </div>
+                <div className="hidden sm:block text-left">
+                  <div className="text-sm font-medium text-white">
+                    {user?.firstName} {user?.lastName}
+                  </div>
+                  <div className="text-xs text-gray-400">{user?.email}</div>
+                </div>
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
+                  <div className="py-2">
+                    <div className="px-4 py-2 border-b border-gray-700">
+                      <div className="font-medium text-white">
+                        {user?.firstName} {user?.lastName}
+                      </div>
+                      <div className="text-sm text-gray-400">{user?.email}</div>
+                    </div>
+
+                    <Link
+                      to="/profile"
+                      className="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <svg
+                        className="w-4 h-4 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                      Profile Settings
+                    </Link>
+
+                    <Link
+                      to="/tickets"
+                      className="flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <svg
+                        className="w-4 h-4 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      My Appointments
+                    </Link>
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Mobile menu button */}

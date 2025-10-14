@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import MapWithHospitals from "../components/map/MapWithHospitals";
 import HospitalSearch from "../components/map/HospitalSearch";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -7,6 +9,8 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [userLocation, setUserLocation] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   const [selectedHospital, setSelectedHospital] = useState({
     id: 1,
     name: "City General Hospital",
@@ -58,6 +62,15 @@ const Dashboard = () => {
 
   const handleSearchResults = (results) => {
     setSearchResults(results);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  const handleLogin = () => {
+    navigate("/login");
   };
 
   return (
@@ -160,11 +173,49 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="flex justify-end pt-4 opacity-0 animate-fade-slide-in">
-          <button className="bg-primary text-background-dark font-bold py-3 px-6 rounded-lg hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-primary/30">
-            Get Best Time to Visit
-          </button>
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center pt-4 opacity-0 animate-fade-slide-in">
+          <div className="flex items-center space-x-4">
+            {isAuthenticated && user && (
+              <div className="text-sm text-gray-400">
+                Welcome back,{" "}
+                <span className="text-primary font-semibold">
+                  {user.firstName}
+                </span>
+                !
+              </div>
+            )}
+          </div>
+          <div className="flex space-x-3">
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="bg-gray-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  My Profile
+                </button>
+                <button className="bg-primary text-background-dark font-bold py-3 px-6 rounded-lg hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-primary/30">
+                  Get Best Time to Visit
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleLogin}
+                  className="bg-gray-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => navigate("/register")}
+                  className="bg-primary text-background-dark font-bold py-3 px-6 rounded-lg hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-primary/30"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

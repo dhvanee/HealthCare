@@ -1,84 +1,103 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getNearbyHospitals } from "../services/hospitalService";
+import { useAuth } from "../context/AuthContext";
 
 const Hospitals = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [hospitals, setHospitals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const { user } = useAuth();
 
-  const hospitals = [
-    {
-      id: 1,
-      name: "City General Hospital",
-      address: "123 Health St, Wellness City",
-      distance: "2.3 km",
-      waitTime: "25 mins",
-      rating: 4.5,
-      departments: ["Emergency", "Cardiology", "Neurology"],
-      image:
-        "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=300&h=200&fit=crop",
-    },
-    {
-      id: 2,
-      name: "County Medical Center",
-      address: "456 Care Ave, Health Valley",
-      distance: "5.1 km",
-      waitTime: "15 mins",
-      rating: 4.2,
-      departments: ["Pediatrics", "Orthopedics", "Dermatology"],
-      image:
-        "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=300&h=200&fit=crop",
-    },
-    {
-      id: 3,
-      name: "Regional Health Clinic",
-      address: "789 Medical Blvd, Cure Town",
-      distance: "3.7 km",
-      waitTime: "45 mins",
-      rating: 4.0,
-      departments: ["Internal Medicine", "Psychiatry", "Radiology"],
-      image:
-        "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop",
-    },
-    {
-      id: 4,
-      name: "Metropolitan Hospital",
-      address: "321 Medical Plaza, Health City",
-      distance: "1.8 km",
-      waitTime: "30 mins",
-      rating: 4.7,
-      departments: ["Surgery", "Oncology", "Radiology"],
-      image:
-        "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=200&fit=crop",
-    },
-    {
-      id: 5,
-      name: "St. Mary's Medical Center",
-      address: "567 Healing Way, Care Valley",
-      distance: "4.2 km",
-      waitTime: "20 mins",
-      rating: 4.3,
-      departments: ["Maternity", "Pediatrics", "Cardiology"],
-      image:
-        "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=300&h=200&fit=crop",
-    },
-    {
-      id: 6,
-      name: "University Medical Campus",
-      address: "890 Research Blvd, Education District",
-      distance: "6.5 km",
-      waitTime: "35 mins",
-      rating: 4.6,
-      departments: ["Research", "Neurology", "Transplant"],
-      image:
-        "https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=300&h=200&fit=crop",
-    },
-  ];
+  // Get user's current location
+  useEffect(() => {
+    const getCurrentLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setUserLocation([latitude, longitude]);
+          },
+          (err) => {
+            console.warn("Geolocation failed:", err);
+            // Use default location (San Francisco)
+            setUserLocation([37.7749, -122.4194]);
+          },
+        );
+      } else {
+        setUserLocation([37.7749, -122.4194]);
+      }
+    };
+
+    getCurrentLocation();
+  }, []);
+
+  // Fetch hospitals when location is available
+  useEffect(() => {
+    const fetchHospitals = async () => {
+      if (!userLocation) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const hospitalData = await getNearbyHospitals(
+          userLocation[0],
+          userLocation[1],
+          {
+            radius: 10000, // 10km radius for hospitals page
+            useDemo: true, // Use demo data, set to false for real APIs
+            forceRealData: false,
+            maxResults: 20,
+          },
+        );
+
+        // Add default images to hospitals that don't have them
+        const hospitalsWithImages = hospitalData.map((hospital, index) => ({
+          ...hospital,
+          image: hospital.image || getDefaultHospitalImage(index),
+          departments: hospital.departments ||
+            hospital.specialties || ["General Medicine"],
+        }));
+
+        setHospitals(hospitalsWithImages);
+      } catch (err) {
+        console.error("Error fetching hospitals:", err);
+        setError("Failed to load hospitals. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHospitals();
+  }, [userLocation]);
+
+  // Get default hospital image based on index
+  const getDefaultHospitalImage = (index) => {
+    const images = [
+      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=300&h=200&fit=crop",
+      "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=300&h=200&fit=crop",
+      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop",
+      "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=200&fit=crop",
+      "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=300&h=200&fit=crop",
+      "https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=300&h=200&fit=crop",
+    ];
+    return images[index % images.length];
+  };
 
   const filteredHospitals = hospitals.filter(
     (hospital) =>
       hospital.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       hospital.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hospital.departments.some((dept) =>
-        dept.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
+      (hospital.departments &&
+        hospital.departments.some((dept) =>
+          dept.toLowerCase().includes(searchQuery.toLowerCase()),
+        )) ||
+      (hospital.specialties &&
+        hospital.specialties.some((spec) =>
+          spec.toLowerCase().includes(searchQuery.toLowerCase()),
+        )),
   );
 
   const getWaitTimeBadge = (waitTime) => {
@@ -89,6 +108,32 @@ const Hospitals = () => {
       return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
     return "bg-red-500/20 text-red-400 border-red-500/30";
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-white">Loading hospitals near you...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <div className="bg-red-900/50 border border-red-500/50 text-red-200 px-6 py-4 rounded-lg max-w-md mx-auto">
+            <h2 className="font-semibold mb-2">Error Loading Hospitals</h2>
+            <p>{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -101,6 +146,11 @@ const Hospitals = () => {
           Discover nearby hospitals with real-time wait times and book your
           preferred time slot.
         </p>
+        {userLocation && (
+          <p className="text-sm text-primary mt-2">
+            📍 Showing hospitals near your location
+          </p>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -190,7 +240,10 @@ const Hospitals = () => {
               <div className="mb-4">
                 <p className="text-sm text-gray-400 mb-2">Departments:</p>
                 <div className="flex flex-wrap gap-2">
-                  {hospital.departments.map((dept, index) => (
+                  {(
+                    hospital.departments ||
+                    hospital.specialties || ["General Medicine"]
+                  ).map((dept, index) => (
                     <span
                       key={index}
                       className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs border border-primary/20"
@@ -205,7 +258,10 @@ const Hospitals = () => {
                 <button className="flex-1 bg-primary hover:bg-primary/90 text-background-dark font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-lg shadow-primary/20">
                   Book Now
                 </button>
-                <button className="px-4 py-2.5 border border-gray-600 hover:border-gray-500 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-colors">
+                <button
+                  className="px-4 py-2.5 border border-gray-600 hover:border-gray-500 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-colors"
+                  title="View Hospital Details"
+                >
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -220,6 +276,27 @@ const Hospitals = () => {
                     />
                   </svg>
                 </button>
+                {hospital.phone && hospital.phone !== "Phone not available" && (
+                  <button
+                    className="px-4 py-2.5 border border-green-600 hover:border-green-500 rounded-lg text-green-400 hover:text-green-300 hover:bg-green-800/20 transition-colors"
+                    title="Call Hospital"
+                    onClick={() => window.open(`tel:${hospital.phone}`)}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                      />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           </div>

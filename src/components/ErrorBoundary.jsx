@@ -1,5 +1,5 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React from "react";
+import PropTypes from "prop-types";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,10 +14,10 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     // You can also log the error to an error reporting service
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
     this.setState({
-      error: error,
-      errorInfo: errorInfo
+      error,
+      errorInfo,
     });
   }
 
@@ -45,14 +45,19 @@ class ErrorBoundary extends React.Component {
                 Map Loading Error
               </h2>
               <p className="text-gray-400 mb-4">
-                We're having trouble loading the map. This might be due to a network issue or browser compatibility.
+                We&apos;re having trouble loading the map. This might be due to
+                a network issue or browser compatibility.
               </p>
             </div>
 
             <div className="space-y-3">
               <button
                 onClick={() => {
-                  this.setState({ hasError: false, error: null, errorInfo: null });
+                  this.setState({
+                    hasError: false,
+                    error: null,
+                    errorInfo: null,
+                  });
                   if (this.props.onRetry) {
                     this.props.onRetry();
                   }
@@ -70,16 +75,20 @@ class ErrorBoundary extends React.Component {
               </button>
             </div>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mt-6 text-left bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-                <h3 className="text-sm font-semibold text-red-400 mb-2">Development Error Details:</h3>
-                <pre className="text-xs text-gray-300 overflow-auto max-h-32">
-                  {this.state.error && this.state.error.toString()}
-                  <br />
-                  {this.state.errorInfo.componentStack}
-                </pre>
-              </div>
-            )}
+            {typeof process !== "undefined" &&
+              process.env?.NODE_ENV === "development" &&
+              this.state.error && (
+                <div className="mt-6 text-left bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                  <h3 className="text-sm font-semibold text-red-400 mb-2">
+                    Development Error Details:
+                  </h3>
+                  <pre className="text-xs text-gray-300 overflow-auto max-h-32">
+                    {this.state.error && this.state.error.toString()}
+                    <br />
+                    {this.state.errorInfo.componentStack}
+                  </pre>
+                </div>
+              )}
           </div>
         </div>
       );
