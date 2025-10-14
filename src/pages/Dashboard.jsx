@@ -1,7 +1,22 @@
 import { useState } from "react";
+import MapWithHospitals from "../components/map/MapWithHospitals";
+import HospitalSearch from "../components/map/HospitalSearch";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [userLocation, setUserLocation] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedHospital, setSelectedHospital] = useState({
+    id: 1,
+    name: "City General Hospital",
+    address: "123 Health St, Wellness City",
+    phone: "+1 234-567-8900",
+    distance: "0.8 km",
+    waitTime: "25 mins",
+    specialties: ["Emergency", "Cardiology", "Neurology"],
+    rating: 4.5,
+  });
 
   const waitTimeCards = [
     {
@@ -33,84 +48,38 @@ const Dashboard = () => {
     },
   ];
 
+  const handleHospitalSelect = (hospital) => {
+    setSelectedHospital(hospital);
+  };
+
+  const handleLocationUpdate = (location) => {
+    setUserLocation(location);
+  };
+
+  const handleSearchResults = (results) => {
+    setSearchResults(results);
+  };
+
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Map Section */}
       <div className="w-1/3 flex flex-col border-r border-gray-700/50">
         <div className="p-4">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <svg
-                className="text-gray-400"
-                fill="currentColor"
-                height="20"
-                viewBox="0 0 256 256"
-                width="20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
-              </svg>
-            </div>
-            <input
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-background-dark/50 text-white placeholder-gray-400 border border-gray-700/50 focus:ring-primary focus:border-primary"
-              placeholder="Search location..."
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <HospitalSearch
+            onSearchResults={handleSearchResults}
+            userLocation={userLocation}
+          />
         </div>
 
         {/* Map Container */}
-        <div
-          className="flex-1 bg-cover bg-center relative"
-          style={{
-            backgroundImage:
-              'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&h=600&fit=crop")',
-          }}
-        >
-          <div className="absolute inset-0 bg-black/40"></div>
-
-          {/* Map Controls */}
-          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-            <div className="flex flex-col rounded-lg overflow-hidden bg-background-dark/80 backdrop-blur-sm shadow-xl">
-              <button className="p-2.5 hover:bg-primary/20 transition-colors text-white">
-                <svg
-                  fill="currentColor"
-                  height="20"
-                  viewBox="0 0 256 256"
-                  width="20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path>
-                </svg>
-              </button>
-              <div className="h-px bg-gray-600/50"></div>
-              <button className="p-2.5 hover:bg-primary/20 transition-colors text-white">
-                <svg
-                  fill="currentColor"
-                  height="20"
-                  viewBox="0 0 256 256"
-                  width="20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path>
-                </svg>
-              </button>
-            </div>
-            <button className="p-2.5 rounded-lg bg-background-dark/80 backdrop-blur-sm shadow-xl hover:bg-primary/20 transition-colors text-white">
-              <svg
-                fill="currentColor"
-                height="20"
-                transform="scale(-1, 1)"
-                viewBox="0 0 256 256"
-                width="20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M229.33,98.21,53.41,33l-.16-.05A16,16,0,0,0,32.9,53.25a1,1,0,0,0,.05.16L98.21,229.33A15.77,15.77,0,0,0,113.28,240h.3a15.77,15.77,0,0,0,15-11.29l23.56-76.56,76.56-23.56a16,16,0,0,0,.62-30.38ZM224,113.3l-76.56,23.56a16,16,0,0,0-10.58,10.58L113.3,224h0l-.06-.17L48,48l175.82,65.22.16.06Z"></path>
-              </svg>
-            </button>
-          </div>
+        <div className="flex-1 relative">
+          <ErrorBoundary>
+            <MapWithHospitals
+              onHospitalSelect={handleHospitalSelect}
+              onLocationUpdate={handleLocationUpdate}
+              searchResults={searchResults}
+            />
+          </ErrorBoundary>
         </div>
       </div>
 
@@ -118,9 +87,22 @@ const Dashboard = () => {
       <div className="w-2/3 flex flex-col p-6 space-y-6 overflow-y-auto">
         <div>
           <h2 className="text-3xl font-bold text-white">
-            City General Hospital
+            {selectedHospital.name}
           </h2>
-          <p className="text-gray-400 mt-1">123 Health St, Wellness City</p>
+          <p className="text-gray-400 mt-1">{selectedHospital.address}</p>
+          {selectedHospital.phone && (
+            <p className="text-gray-400 text-sm mt-1">
+              📞 {selectedHospital.phone}
+            </p>
+          )}
+          <div className="flex items-center mt-2 space-x-4">
+            <span className="text-primary font-semibold">
+              🚗 {selectedHospital.distance}
+            </span>
+            <span className="text-yellow-400 font-semibold">
+              ⭐ {selectedHospital.rating}
+            </span>
+          </div>
         </div>
 
         {/* Wait Time Cards */}

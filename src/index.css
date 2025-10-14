@@ -223,3 +223,38 @@ select {
     transform: scaleX(0);
     transition: transform 0.3s ease-in-out;
 }
+
+/* Leaflet map styling fixes */
+.leaflet-container {
+    height: 100%;
+    width: 100%;
+    z-index: 1;
+}
+
+.leaflet-control-zoom {
+    display: none; /* Hide default zoom controls since we have custom ones */
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.leaflet-popup-tip {
+    background: white;
+}
+
+/* Custom map tile styling for dark theme */
+.map-tiles {
+    filter: brightness(0.8) contrast(1.2) saturate(0.8);
+}
+
+/* Ensure map markers are properly positioned */
+.leaflet-marker-icon {
+    border-radius: 50%;
+}
