@@ -1,168 +1,190 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import MetricCard from '../components/ui/metric-card';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { useState } from "react";
 
 const Dashboard = () => {
-  // Mock data for charts
-  const waitTimeData = [
-    { time: '8 AM', actual: 15, predicted: 12 },
-    { time: '10 AM', actual: 25, predicted: 22 },
-    { time: '12 PM', actual: 30, predicted: 35 },
-    { time: '2 PM', actual: 20, predicted: 18 },
-    { time: '4 PM', actual: 15, predicted: 14 },
-    { time: '6 PM', actual: 10, predicted: 8 },
-  ];
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const hospitalData = [
-    { name: 'City Hospital', patients: 45 },
-    { name: 'General Medical', patients: 32 },
-    { name: 'St. Mary\'s', patients: 28 },
-    { name: 'Community Care', patients: 22 },
-    { name: 'University Hospital', patients: 38 },
-  ];
-
-  const alerts = [
-    { id: 1, hospital: 'City Hospital', message: 'Queue surged by 15% in last 10 min', time: '5 min ago' },
-    { id: 2, hospital: 'General Medical', message: 'Wait time exceeding threshold in ER', time: '12 min ago' },
-    { id: 3, hospital: 'St. Mary\'s', message: 'Staff shortage detected in Radiology', time: '25 min ago' },
+  const waitTimeCards = [
+    {
+      id: 1,
+      title: "Outpatient (OPD)",
+      waitTime: 25,
+      unit: "mins",
+      description: "Current Wait Time",
+      progress: 45,
+      color: "primary",
+    },
+    {
+      id: 2,
+      title: "General Check-in",
+      waitTime: 15,
+      unit: "mins",
+      description: "Current Wait Time",
+      progress: 25,
+      color: "green",
+    },
+    {
+      id: 3,
+      title: "Emergency Room",
+      waitTime: 45,
+      unit: "mins",
+      description: "Critical Wait Time",
+      progress: 75,
+      color: "red",
+    },
   ];
 
   return (
-    <div className="pt-16">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-8"
-      >
-        <h1 className="text-3xl font-bold text-gray-800">Real-time hospital queue insights</h1>
-        <p className="text-gray-600 mt-2">Monitor and optimize patient wait times across all facilities</p>
-      </motion.div>
+    <div className="flex flex-1 overflow-hidden">
+      {/* Map Section */}
+      <div className="w-1/3 flex flex-col border-r border-gray-700/50">
+        <div className="p-4">
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <svg
+                className="text-gray-400"
+                fill="currentColor"
+                height="20"
+                viewBox="0 0 256 256"
+                width="20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+              </svg>
+            </div>
+            <input
+              className="w-full pl-10 pr-4 py-2 rounded-lg bg-background-dark/50 text-white placeholder-gray-400 border border-gray-700/50 focus:ring-primary focus:border-primary"
+              placeholder="Search location..."
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-      >
-        <MetricCard 
-          title="Total Active Hospitals" 
-          value="24" 
-          icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm3 1h6v4H7V5zm8 8V7a1 1 0 00-1-1H6a1 1 0 00-1 1v6a1 1 0 001 1h8a1 1 0 001-1z" clipRule="evenodd" />
-          </svg>}
-          trend="up"
-          trendValue="2 new this month"
-        />
-        <MetricCard 
-          title="Total Patients Waiting" 
-          value="342" 
-          icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-          </svg>}
-          trend="down"
-          trendValue="5% from yesterday"
-        />
-        <MetricCard 
-          title="Average Wait Time" 
-          value="24 min" 
-          icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-          </svg>}
-          trend="up"
-          trendValue="3 min increase"
-        />
-        <MetricCard 
-          title="Bottleneck Alerts" 
-          value="5" 
-          icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>}
-          trend="up"
-          trendValue="2 new alerts"
-        />
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+        {/* Map Container */}
+        <div
+          className="flex-1 bg-cover bg-center relative"
+          style={{
+            backgroundImage:
+              'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&h=600&fit=crop")',
+          }}
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Wait Time Trends</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={waitTimeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="time" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="actual" stroke="#4A90E2" strokeWidth={2} name="Actual Wait" />
-                  <Line type="monotone" dataKey="predicted" stroke="#00C4CC" strokeWidth={2} name="Predicted Wait" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
+          <div className="absolute inset-0 bg-black/40"></div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>Busiest Hospitals</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={hospitalData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="patients" fill="#4A90E2" name="Waiting Patients" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
+          {/* Map Controls */}
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+            <div className="flex flex-col rounded-lg overflow-hidden bg-background-dark/80 backdrop-blur-sm shadow-xl">
+              <button className="p-2.5 hover:bg-primary/20 transition-colors text-white">
+                <svg
+                  fill="currentColor"
+                  height="20"
+                  viewBox="0 0 256 256"
+                  width="20"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path>
+                </svg>
+              </button>
+              <div className="h-px bg-gray-600/50"></div>
+              <button className="p-2.5 hover:bg-primary/20 transition-colors text-white">
+                <svg
+                  fill="currentColor"
+                  height="20"
+                  viewBox="0 0 256 256"
+                  width="20"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path>
+                </svg>
+              </button>
+            </div>
+            <button className="p-2.5 rounded-lg bg-background-dark/80 backdrop-blur-sm shadow-xl hover:bg-primary/20 transition-colors text-white">
+              <svg
+                fill="currentColor"
+                height="20"
+                transform="scale(-1, 1)"
+                viewBox="0 0 256 256"
+                width="20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M229.33,98.21,53.41,33l-.16-.05A16,16,0,0,0,32.9,53.25a1,1,0,0,0,.05.16L98.21,229.33A15.77,15.77,0,0,0,113.28,240h.3a15.77,15.77,0,0,0,15-11.29l23.56-76.56,76.56-23.56a16,16,0,0,0,.62-30.38ZM224,113.3l-76.56,23.56a16,16,0,0,0-10.58,10.58L113.3,224h0l-.06-.17L48,48l175.82,65.22.16.06Z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Live Updates</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {alerts.map(alert => (
-                <div key={alert.id} className="flex items-center p-3 bg-blue-50 rounded-lg">
-                  <div className="mr-4 bg-blue-100 rounded-full p-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium text-blue-900">{alert.hospital}</h4>
-                    <p className="text-sm text-blue-700">{alert.message}</p>
-                  </div>
-                  <div className="text-xs text-blue-500">{alert.time}</div>
+      {/* Hospital Details Section */}
+      <div className="w-2/3 flex flex-col p-6 space-y-6 overflow-y-auto">
+        <div>
+          <h2 className="text-3xl font-bold text-white">
+            City General Hospital
+          </h2>
+          <p className="text-gray-400 mt-1">123 Health St, Wellness City</p>
+        </div>
+
+        {/* Wait Time Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {waitTimeCards.map((card) => (
+            <div
+              key={card.id}
+              className="bg-gray-800/50 border border-primary/20 rounded-xl p-5 backdrop-blur-lg shadow-2xl shadow-primary/10 hover:border-primary/50 transition-all duration-300 relative overflow-hidden group"
+            >
+              <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-primary/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-3xl"></div>
+              <div className="relative z-10">
+                <h3 className="font-bold text-lg text-white">{card.title}</h3>
+                <p className="text-3xl font-bold text-primary mt-2">
+                  {card.waitTime}{" "}
+                  <span className="text-base font-medium text-gray-400">
+                    {card.unit}
+                  </span>
+                </p>
+                <p className="text-sm text-gray-400 mt-1">{card.description}</p>
+                <div className="w-full bg-gray-700/50 rounded-full h-2.5 mt-4">
+                  <div
+                    className="bg-primary h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${card.progress}%` }}
+                  ></div>
                 </div>
-              ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          ))}
+        </div>
+
+        {/* Historical Chart Section */}
+        <div className="pt-6">
+          <h3 className="text-xl font-bold text-white">
+            Historical Wait Times
+          </h3>
+          <div className="mt-4 bg-gray-800/30 p-6 rounded-xl border border-gray-700/50">
+            <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center">
+              <div className="text-center">
+                <svg
+                  className="w-16 h-16 text-gray-600 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                <p className="text-gray-400">Historical data visualization</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div className="flex justify-end pt-4 opacity-0 animate-fade-slide-in">
+          <button className="bg-primary text-background-dark font-bold py-3 px-6 rounded-lg hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-primary/30">
+            Get Best Time to Visit
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

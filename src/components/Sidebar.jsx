@@ -1,52 +1,260 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  LayoutDashboard,
+  Hospital,
+  Brain,
+  Calendar,
+  Info,
+  Stethoscope,
+  Activity,
+} from "lucide-react";
 
 const Sidebar = () => {
   const location = useLocation();
-  
+
   const isActive = (path) => {
     return location.pathname === path;
   };
 
+  const navItems = [
+    {
+      path: "/",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      description: "Overview and metrics",
+    },
+    {
+      path: "/hospitals",
+      label: "Find Hospitals",
+      icon: Hospital,
+      description: "Search nearby facilities",
+    },
+    {
+      path: "/predictions",
+      label: "AI Predictions",
+      icon: Brain,
+      description: "Wait time forecasts",
+    },
+    {
+      path: "/bookings",
+      label: "My Bookings",
+      icon: Calendar,
+      description: "Manage appointments",
+    },
+    {
+      path: "/about",
+      label: "About",
+      icon: Info,
+      description: "Learn more",
+    },
+  ];
+
+  const sidebarVariants = {
+    initial: { x: -250, opacity: 0 },
+    animate: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    initial: { x: -20, opacity: 0 },
+    animate: {
+      x: 0,
+      opacity: 1,
+      transition: { duration: 0.3 },
+    },
+    hover: {
+      x: 8,
+      transition: { duration: 0.2 },
+    },
+  };
+
+  const logoVariants = {
+    initial: { scale: 0, rotate: -180 },
+    animate: {
+      scale: 1,
+      rotate: 0,
+      transition: {
+        type: "spring",
+        stiffness: 200,
+        damping: 20,
+        delay: 0.2,
+      },
+    },
+  };
+
   return (
-    <aside className="hidden md:flex flex-col w-64 h-screen px-4 py-8 overflow-y-auto bg-white border-r rtl:border-r-0 rtl:border-l">
+    <motion.aside
+      className="hidden md:flex flex-col w-72 h-screen bg-white border-r border-gray-200 shadow-lg overflow-y-auto"
+      variants={sidebarVariants}
+      initial="initial"
+      animate="animate"
+    >
       <div className="flex flex-col justify-between flex-1">
-        <nav>
-          <Link to="/" className={`flex items-center px-4 py-2 mt-5 rounded-lg ${isActive('/') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 11H5M19 11C20.1046 11 21 11.8954 21 13V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V13C3 11.8954 3.89543 11 5 11M19 11V9C19 7.89543 18.1046 7 17 7M5 11V9C5 7.89543 5.89543 7 7 7M7 7V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V7M7 7H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="mx-4 font-medium">Dashboard</span>
-          </Link>
+        {/* Logo and Brand */}
+        <div className="p-6">
+          <motion.div
+            className="flex items-center mb-8"
+            variants={logoVariants}
+          >
+            <motion.div
+              className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mr-3"
+              whileHover={{
+                scale: 1.1,
+                rotate: 5,
+                transition: { duration: 0.2 },
+              }}
+            >
+              <Stethoscope className="h-6 w-6 text-white" />
+            </motion.div>
+            <div>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                HealthCare
+              </h2>
+              <p className="text-xs text-gray-500">Smart Queue System</p>
+            </div>
+          </motion.div>
 
-          <Link to="/hospitals" className={`flex items-center px-4 py-2 mt-5 rounded-lg ${isActive('/hospitals') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 10H5C3.89543 10 3 10.8954 3 12V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V12C21 10.8954 20.1046 10 19 10Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M7 10V7C7 5.93913 7.42143 4.92172 8.17157 4.17157C8.92172 3.42143 9.93913 3 11 3H13C14.0609 3 15.0783 3.42143 15.8284 4.17157C16.5786 4.92172 17 5.93913 17 7V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M12 16H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="mx-4 font-medium">Hospitals</span>
-          </Link>
+          {/* Navigation */}
+          <nav className="space-y-2">
+            {navItems.map((item, index) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
 
-          <Link to="/predictions" className={`flex items-center px-4 py-2 mt-5 rounded-lg ${isActive('/predictions') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 4H20V16H4V4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M9 16V20H15V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M8 10L12 14L16 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="mx-4 font-medium">Predictions</span>
-          </Link>
+              return (
+                <motion.div
+                  key={item.path}
+                  variants={itemVariants}
+                  whileHover="hover"
+                  custom={index}
+                >
+                  <Link
+                    to={item.path}
+                    className={`group relative flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
+                      active
+                        ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    {/* Active indicator */}
+                    {active && (
+                      <motion.div
+                        className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-full"
+                        layoutId="activeIndicator"
+                        initial={false}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 30,
+                        }}
+                      />
+                    )}
 
-          <Link to="/about" className={`flex items-center px-4 py-2 mt-5 rounded-lg ${isActive('/about') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M12 16V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M12 8H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="mx-4 font-medium">About</span>
-          </Link>
-        </nav>
+                    {/* Icon with animation */}
+                    <motion.div
+                      className={`flex-shrink-0 mr-3 ${active ? "text-white" : "text-gray-400"}`}
+                      whileHover={{
+                        scale: 1.1,
+                        transition: { duration: 0.2 },
+                      }}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </motion.div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`font-medium text-sm ${active ? "text-white" : "text-gray-900"}`}
+                      >
+                        {item.label}
+                      </div>
+                      <div
+                        className={`text-xs mt-0.5 ${active ? "text-blue-100" : "text-gray-500"}`}
+                      >
+                        {item.description}
+                      </div>
+                    </div>
+
+                    {/* Hover effect */}
+                    <motion.div
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      initial={{ scale: 0.8 }}
+                      whileHover={{ scale: 1 }}
+                    />
+
+                    {/* Notification badge (example for bookings) */}
+                    {item.path === "/bookings" && (
+                      <motion.div
+                        className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [0.7, 1, 0.7],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                      />
+                    )}
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Bottom Section */}
+        <motion.div
+          className="p-6 border-t border-gray-100"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          {/* Live Status */}
+          <div className="flex items-center justify-between mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+            <div className="flex items-center">
+              <motion.div
+                className="w-2 h-2 bg-green-500 rounded-full mr-2"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.7, 1, 0.7],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              <span className="text-sm font-medium text-green-800">
+                System Online
+              </span>
+            </div>
+            <Activity className="h-4 w-4 text-green-600" />
+          </div>
+
+          {/* User Info */}
+          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
+              U
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-gray-900 truncate">
+                Guest User
+              </div>
+              <div className="text-xs text-gray-500">Demo Mode</div>
+            </div>
+          </div>
+        </motion.div>
       </div>
-    </aside>
+    </motion.aside>
   );
 };
 

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QueueWise - Hospital Queue Prediction</title>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#00d4ff",
+              "background-light": "#f5f8f8",
+              "background-dark": "#0f2023",
+            },
+            fontFamily: {
+              display: ["Space Grotesk", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+      .fade-slide-in {
+        animation: fadeSlideIn 0.5s ease-out forwards;
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      @keyframes fadeSlideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100">
+<div class="flex h-screen flex-col">
+<header class="border-b border-gray-200/10 dark:border-gray-700/50">
+<div class="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+<div class="flex items-center gap-4">
+<svg class="text-primary" fill="currentColor" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path>
+</svg>
+<h1 class="text-xl font-bold text-gray-900 dark:text-white">QueueWise</h1>
+</div>
+<nav class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600 dark:text-gray-300">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<a class="hover:text-primary transition-colors" href="#">Hospitals</a>
+<a class="hover:text-primary transition-colors" href="#">About Us</a>
+<a class="hover:text-primary transition-colors" href="#">Contact</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="bg-primary text-background-dark px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">Predict Now</button>
+<button class="p-2 rounded-full hover:bg-primary/20 transition-colors">
+<svg class="text-gray-600 dark:text-gray-300" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+<path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"></path>
+</svg>
+</button>
+<div class="size-10 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCTkiZgTrSaLO6jQiQH0OU3cJRuW_0pDi3NEK9rawcox2_Pc1irRrtt3sOeVLF78FHRbLttrKh1E6er1vmGcvF0lpi93Qkd79CSmpyXfsaj5fAXw6DWv8kuVEhVtaFZaflPkIKlJlULtQbylyJVw6apq7mLI3x8AlrkPsKVe8n7UAfNTDy3K0Iqn5xL_ppw-VZ5JupgoHLI20g37LaQGnc3h_XCVxN5uetiUto7HPjuyEFYdYGbc8ESs5OI5qVhYsWlDQcvPHfviaA");'></div>
+</div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<div class="w-1/3 flex flex-col border-r border-gray-200/10 dark:border-gray-700/50">
+<div class="p-4">
+<div class="relative">
+<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+<svg class="text-gray-400 dark:text-gray-500" fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+<path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+</svg>
+</div>
+<input class="w-full pl-10 pr-4 py-2 rounded-lg bg-background-dark dark:bg-background-dark/50 text-gray-100 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-700/50 focus:ring-primary focus:border-primary" placeholder="Search location..." type="text"/>
+</div>
+</div>
+<div class="flex-1 bg-cover bg-center relative" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAiOkU3SZqc2OVenKbsJArmhUUi77lLw1m7PyeVwZapT32HBEWN5nLsbs3bpUJJqz0gJEzXR34SVx2kNGKNDVy_RFmRT914J69s6bIrGG4wTR26SDAA6aTuXLTBZ4CewkqWMS2qnIj92ETy65L34M-fcf45lSf9pSmIl8QoZCbx_t4ibRK8nbhYXelOLe3lZ0ubfNld-SGB096g9db2ZyEn87wecEqyxadQjPKUzx_dwhpnPDu4iUBJLEEaj_4XhX1-I-47GfYesLU");'>
+<div class="absolute inset-0 bg-black/30"></div>
+<div class="absolute bottom-4 right-4 flex flex-col gap-2">
+<div class="flex flex-col rounded-lg overflow-hidden bg-background-dark/70 dark:bg-background-dark/90 backdrop-blur-sm shadow-xl">
+<button class="p-2.5 hover:bg-primary/20 transition-colors text-white">
+<svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+<path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path>
+</svg>
+</button>
+<div class="h-px bg-gray-700/50"></div>
+<button class="p-2.5 hover:bg-primary/20 transition-colors text-white">
+<svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+<path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path>
+</svg>
+</button>
+</div>
+<button class="p-2.5 rounded-lg bg-background-dark/70 dark:bg-background-dark/90 backdrop-blur-sm shadow-xl hover:bg-primary/20 transition-colors text-white">
+<svg fill="currentColor" height="20" transform="scale(-1, 1)" viewBox="0 0 256 256" width="20" xmlns="http://www.w3.org/2000/svg">
+<path d="M229.33,98.21,53.41,33l-.16-.05A16,16,0,0,0,32.9,53.25a1,1,0,0,0,.05.16L98.21,229.33A15.77,15.77,0,0,0,113.28,240h.3a15.77,15.77,0,0,0,15-11.29l23.56-76.56,76.56-23.56a16,16,0,0,0,.62-30.38ZM224,113.3l-76.56,23.56a16,16,0,0,0-10.58,10.58L113.3,224h0l-.06-.17L48,48l175.82,65.22.16.06Z"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<div class="w-2/3 flex flex-col p-6 space-y-6 overflow-y-auto">
+<div>
+<h2 class="text-3xl font-bold text-gray-900 dark:text-white">City General Hospital</h2>
+<p class="text-gray-500 dark:text-gray-400 mt-1">123 Health St, Wellness City</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-5 backdrop-blur-lg shadow-2xl shadow-primary/10 hover:border-primary/50 transition-all duration-300 relative overflow-hidden group">
+<div class="absolute -top-1/2 -right-1/2 w-full h-full bg-primary/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-3xl"></div>
+<div class="relative z-10">
+<h3 class="font-bold text-lg text-gray-900 dark:text-white">Outpatient (OPD)</h3>
+<p class="text-3xl font-bold text-primary mt-2">25 <span class="text-base font-medium text-gray-600 dark:text-gray-300">mins</span></p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Current Wait Time</p>
+<div class="w-full bg-primary/20 rounded-full h-2.5 mt-4">
+<div class="bg-primary h-2.5 rounded-full" style="width: 45%"></div>
+</div>
+</div>
+</div>
+<div class="bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-5 backdrop-blur-lg shadow-2xl shadow-primary/10 hover:border-primary/50 transition-all duration-300 relative overflow-hidden group">
+<div class="absolute -top-1/2 -right-1/2 w-full h-full bg-primary/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-3xl"></div>
+<div class="relative z-10">
+<h3 class="font-bold text-lg text-gray-900 dark:text-white">General Check-in</h3>
+<p class="text-3xl font-bold text-primary mt-2">15 <span class="text-base font-medium text-gray-600 dark:text-gray-300">mins</span></p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Current Wait Time</p>
+<div class="w-full bg-primary/20 rounded-full h-2.5 mt-4">
+<div class="bg-primary h-2.5 rounded-full" style="width: 25%"></div>
+</div>
+</div>
+</div>
+<div class="bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-5 backdrop-blur-lg shadow-2xl shadow-primary/10 hover:border-primary/50 transition-all duration-300 relative overflow-hidden group">
+<div class="absolute -top-1/2 -right-1/2 w-full h-full bg-primary/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-3xl"></div>
+<div class="relative z-10">
+<h3 class="font-bold text-lg text-gray-900 dark:text-white">Emergency Room</h3>
+<p class="text-3xl font-bold text-primary mt-2">45 <span class="text-base font-medium text-gray-600 dark:text-gray-300">mins</span></p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Critical Wait Time</p>
+<div class="w-full bg-primary/20 rounded-full h-2.5 mt-4">
+<div class="bg-primary h-2.5 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-6">
+<h3 class="text-xl font-bold text-gray-900 dark:text-white">Historical Wait Times</h3>
+<div class="mt-4 bg-background-light dark:bg-background-dark p-4 rounded-xl border border-gray-200/10 dark:border-gray-700/50">
+<img alt="Chart showing historical wait times" class="w-full h-auto rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdeTLg1dwwMMQerL47OZ-DUAZlFqZ07AM1aySNiuYQU0jlA3_gOnyHyAwA9KnC0b_5p-arjXJoRanf5xch6wx-qaNlpVKK0dLkR_LDzKnPq-XyiRPlmIPnRftN_VpFzMYLbN_dCRATx5IPVxvyZeevvX1T78NMKPtyLRalUrt26mvK2zFAa0WhLtrT5bui9-_FA5nkqgOZb6VT7ftLD4kXvy1wlEJedNChJn8gdfFMEFsVtLHHTLZ7EN8qhvkDfXp__y47Ox1N9ng"/>
+</div>
+</div>
+<div class="flex justify-end pt-4 fade-slide-in">
+<button class="bg-primary text-background-dark font-bold py-3 px-6 rounded-lg hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-primary/30">
+              Get Best Time to Visit
+            </button>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

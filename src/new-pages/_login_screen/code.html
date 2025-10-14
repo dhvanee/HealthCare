@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<title>Stitch Design</title>
+<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#00d4ff",
+            "background-light": "#f5f8f8",
+            "background-dark": "#0f2023",
+          },
+          fontFamily: {
+            "display": ["Space Grotesk", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    @keyframes float {
+      0% {
+        transform: translate(0, 0px);
+      }
+      50% {
+        transform: translate(0, 15px);
+      }
+      100% {
+        transform: translate(0, -0px);
+      }
+    }
+    .floating-1 {
+      animation: float 6s ease-in-out infinite;
+    }
+    .floating-2 {
+      animation: float 7s ease-in-out infinite;
+    }
+    .floating-3 {
+      animation: float 8s ease-in-out infinite;
+    }
+    .group:hover .group-hover\:underline-slide {
+      transform: scaleX(1);
+    }
+    .underline-slide {
+      display: block;
+      width: 100%;
+      height: 2px;
+      transform: scaleX(0);
+      transition: transform 0.3s ease-in-out;
+    }
+  </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative min-h-screen w-full overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+<div class="absolute top-1/4 left-1/4 w-48 h-48 bg-primary/20 dark:bg-primary/10 rounded-full blur-2xl floating-1"></div>
+<div class="absolute top-1/2 right-1/4 w-64 h-64 bg-primary/30 dark:bg-primary/20 rounded-full blur-3xl floating-2"></div>
+<div class="absolute bottom-1/4 left-1/3 w-56 h-56 bg-primary/20 dark:bg-primary/10 rounded-full blur-2xl floating-3"></div>
+</div>
+<div class="relative z-10 flex min-h-screen items-center justify-center p-4">
+<div class="w-full max-w-md space-y-6">
+<div class="text-center">
+<h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Predict Your Wait Time with Confidence ⚡</h1>
+</div>
+<div class="relative">
+<div class="absolute inset-0 rounded-xl bg-primary/30 dark:bg-primary/40 blur-lg animate-pulse"></div>
+<div class="relative rounded-xl border border-white/20 bg-background-light/10 dark:bg-background-dark/20 p-8 shadow-2xl backdrop-blur-lg">
+<form class="space-y-6">
+<div>
+<label class="sr-only" for="email">Email</label>
+<input autocomplete="email" class="w-full rounded-lg border-2 border-transparent bg-background-light/20 dark:bg-background-dark/30 px-4 py-3 text-white placeholder-white/60 transition duration-300 focus:border-primary focus:bg-background-light/30 dark:focus:bg-background-dark/40 focus:outline-none focus:ring-0" id="email" name="email" placeholder="Email" required="" type="email"/>
+</div>
+<div>
+<label class="sr-only" for="password">Password</label>
+<input autocomplete="current-password" class="w-full rounded-lg border-2 border-transparent bg-background-light/20 dark:bg-background-dark/30 px-4 py-3 text-white placeholder-white/60 transition duration-300 focus:border-primary focus:bg-background-light/30 dark:focus:bg-background-dark/40 focus:outline-none focus:ring-0" id="password" name="password" placeholder="Password" required="" type="password"/>
+</div>
+<div>
+<button class="w-full rounded-lg bg-primary py-3 px-4 font-bold text-background-dark shadow-lg shadow-primary/20 transition-all duration-300 hover:bg-primary/90 hover:shadow-primary/40 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-dark animate-pulse hover:animate-none" type="submit">
+                  Login
+                </button>
+</div>
+</form>
+<div class="mt-6 text-center text-sm text-white/80">
+<div class="space-y-3">
+<a class="group inline-block font-medium text-white transition hover:text-primary" href="#">
+<span>Don't have an account? Sign Up</span>
+<span class="underline-slide bg-primary"></span>
+</a>
+<a class="group inline-block font-medium text-white transition hover:text-primary" href="#">
+<span>Forgot Password?</span>
+<span class="underline-slide bg-primary"></span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>
