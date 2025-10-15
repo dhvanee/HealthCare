@@ -143,7 +143,7 @@ function generateWaitTime(type) {
  */
 export async function fetchHospitalsFromOSM(lat, lng, radius = 5000) {
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:30];
     (
       node["amenity"="hospital"](around:${radius},${lat},${lng});
       way["amenity"="hospital"](around:${radius},${lat},${lng});
@@ -151,10 +151,18 @@ export async function fetchHospitalsFromOSM(lat, lng, radius = 5000) {
       node["amenity"="clinic"](around:${radius},${lat},${lng});
       way["amenity"="clinic"](around:${radius},${lat},${lng});
       relation["amenity"="clinic"](around:${radius},${lat},${lng});
+      node["amenity"="doctors"](around:${radius},${lat},${lng});
+      way["amenity"="doctors"](around:${radius},${lat},${lng});
       node["healthcare"="hospital"](around:${radius},${lat},${lng});
       way["healthcare"="hospital"](around:${radius},${lat},${lng});
       node["healthcare"="clinic"](around:${radius},${lat},${lng});
       way["healthcare"="clinic"](around:${radius},${lat},${lng});
+      node["healthcare"="centre"](around:${radius},${lat},${lng});
+      way["healthcare"="centre"](around:${radius},${lat},${lng});
+      node["healthcare"="doctor"](around:${radius},${lat},${lng});
+      way["healthcare"="doctor"](around:${radius},${lat},${lng});
+      node["building"="hospital"](around:${radius},${lat},${lng});
+      way["building"="hospital"](around:${radius},${lat},${lng});
     );
     out center meta;
   `;
@@ -328,15 +336,18 @@ export async function fetchHospitalsFromGoogle(
  */
 export async function getNearbyHospitals(lat, lng, options = {}) {
   const {
-    radius = 5000,
+    radius = 10000, // Increased default radius to 10km
     googleApiKey = null,
     useDemo = false,
     maxResults = 20,
     forceRealData = false,
   } = options;
 
+  console.log("getNearbyHospitals called with:", { lat, lng, options });
+
   // If demo mode is enabled and not forcing real data, return modified default data
   if (useDemo && !forceRealData) {
+    console.log("Using demo mode - returning static hospitals");
     return DEFAULT_HOSPITALS.map((hospital) => ({
       ...hospital,
       lat: lat + (Math.random() - 0.5) * 0.02,
@@ -358,12 +369,15 @@ export async function getNearbyHospitals(lat, lng, options = {}) {
         googleApiKey,
         radius,
       );
+      console.log(`Google Places API returned ${hospitals.length} hospitals`);
     } catch (error) {
       console.warn(
         "Google Places API failed, falling back to OpenStreetMap:",
         error,
       );
     }
+  } else {
+    console.log("No Google API key provided, skipping Google Places API");
   }
 
   // Fall back to OpenStreetMap if Google Places failed or no API key
@@ -371,9 +385,19 @@ export async function getNearbyHospitals(lat, lng, options = {}) {
     try {
       console.log("Fetching hospitals from OpenStreetMap...");
       hospitals = await fetchHospitalsFromOSM(lat, lng, radius);
-      console.log(`Found ${hospitals.length} hospitals from OpenStreetMap`);
+      console.log(`OpenStreetMap API returned ${hospitals.length} hospitals`);
+
+      // If still no results, try with a larger radius
+      if (hospitals.length === 0 && radius < 15000) {
+        console.log("No hospitals found, trying with larger radius...");
+        hospitals = await fetchHospitalsFromOSM(lat, lng, 15000);
+        console.log(
+          `OpenStreetMap API with larger radius returned ${hospitals.length} hospitals`,
+        );
+      }
     } catch (error) {
       console.warn("OpenStreetMap API failed, using default hospitals:", error);
+      console.log("Falling back to default static hospitals");
       // Final fallback to default hospitals
       hospitals = DEFAULT_HOSPITALS.map((hospital) => ({
         ...hospital,
@@ -385,10 +409,44 @@ export async function getNearbyHospitals(lat, lng, options = {}) {
     }
   }
 
+  console.log(`Final result: ${hospitals.length} hospitals to return`);
+
   // Sort by distance and limit results
   return hospitals
     .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
     .slice(0, maxResults);
+}
+
+/**
+ * Debug version of getNearbyHospitals with enhanced logging
+ * @param {number} lat - User latitude
+ * @param {number} lng - User longitude
+ * @param {Object} options - Configuration options
+ * @returns {Promise<Array>} Array of hospitals with debug info
+ */
+export async function getNearbyHospitalsWithDebug(lat, lng, options = {}) {
+  console.group("🏥 Hospital Service Debug");
+  console.log("📍 Location:", { lat, lng });
+  console.log("⚙️ Options:", options);
+
+  try {
+    const result = await getNearbyHospitals(lat, lng, options);
+    console.log("✅ Success:", result.length, "hospitals found");
+    console.table(
+      result.map((h) => ({
+        name: h.name,
+        distance: h.distance,
+        type: h.type,
+        source: h.id.toString().includes("hospital-") ? "Static" : "API",
+      })),
+    );
+    console.groupEnd();
+    return result;
+  } catch (error) {
+    console.error("❌ Error:", error);
+    console.groupEnd();
+    throw error;
+  }
 }
 
 /**
@@ -480,6 +538,7 @@ export async function searchHospitals(query, lat, lng) {
 
 export default {
   getNearbyHospitals,
+  getNearbyHospitalsWithDebug,
   getHospitalDetails,
   searchHospitals,
   fetchHospitalsFromOSM,

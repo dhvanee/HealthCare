@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { getNearbyHospitals } from "../services/hospitalService";
+import {
+  getNearbyHospitals,
+  getNearbyHospitalsWithDebug,
+} from "../services/hospitalService";
 import { useAuth } from "../context/AuthContext";
 
 const Hospitals = () => {
@@ -42,13 +45,13 @@ const Hospitals = () => {
       setError(null);
 
       try {
-        const hospitalData = await getNearbyHospitals(
+        const hospitalData = await getNearbyHospitalsWithDebug(
           userLocation[0],
           userLocation[1],
           {
             radius: 10000, // 10km radius for hospitals page
-            useDemo: true, // Use demo data, set to false for real APIs
-            forceRealData: false,
+            useDemo: false, // Use real API data
+            forceRealData: true,
             maxResults: 20,
           },
         );

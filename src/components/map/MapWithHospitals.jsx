@@ -3,7 +3,10 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import PropTypes from "prop-types";
 import "leaflet/dist/leaflet.css";
-import { getNearbyHospitals } from "../../services/hospitalService";
+import {
+  getNearbyHospitals,
+  getNearbyHospitalsWithDebug,
+} from "../../services/hospitalService";
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -138,7 +141,7 @@ const MapWithHospitals = ({
 
         console.log(`Fetching hospitals for coordinates: ${lat}, ${lng}`);
 
-        const hospitalData = await getNearbyHospitals(lat, lng, {
+        const hospitalData = await getNearbyHospitalsWithDebug(lat, lng, {
           radius: 5000, // 5km radius
           useDemo: !useRealData,
           forceRealData: useRealData,
@@ -457,7 +460,7 @@ const MapWithHospitals = ({
               Location enabled
             </div>
           )}
-          <div className="flex items-center text-xs">
+          <div className="flex items-center text-xs mb-2">
             <input
               type="checkbox"
               id="realData"
@@ -469,6 +472,21 @@ const MapWithHospitals = ({
               Use real data
             </label>
           </div>
+          <div className="text-xs text-gray-400">
+            Data source: {useRealData ? "Live APIs" : "Demo"}
+          </div>
+          <button
+            onClick={() => {
+              if (userLocation) {
+                fetchRealHospitals(userLocation[0], userLocation[1]);
+              } else {
+                fetchRealHospitals(37.7749, -122.4194);
+              }
+            }}
+            className="mt-2 px-2 py-1 bg-primary text-white text-xs rounded hover:bg-primary-dark"
+          >
+            Refresh Data
+          </button>
         </div>
       </div>
 
