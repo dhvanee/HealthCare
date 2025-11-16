@@ -22,3 +22,45 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+### Python ###
+# Virtual environments
+.venv/
+backend/.venv/
+venv/
+ENV/
+env/
+.Python
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Pytest / test caches
+.pytest_cache/
+.cache/
+
+# Environment files
+.env
+.env.*
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Build/artifact folders
+build/
+dist/
+*.egg-info/
+eggs/
+
+# Misc
+Thumbs.db
