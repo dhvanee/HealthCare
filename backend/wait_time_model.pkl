@@ -1,1 +1,0 @@
-Placeholder for wait_time_model.pkl
