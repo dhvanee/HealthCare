@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import MapWithHospitals from "../components/map/MapWithHospitals";
 import HospitalSearch from "../components/map/HospitalSearch";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { predictWaitTime, recommendSlots, predictBottleneck } from "../services/api";
 
 const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,6 +72,36 @@ const Dashboard = () => {
 
   const handleLogin = () => {
     navigate("/login");
+  };
+
+  const handlePredictWaitTime = async () => {
+    const payload = {
+      current_queue_length: 10,
+      staff_count: 5,
+      historical_throughput: 20.5,
+      is_holiday: 0,
+      hour: 14,
+      day_of_week: 3,
+    };
+    const result = await predictWaitTime(payload);
+    console.log("Predicted Wait Time:", result);
+  };
+
+  const handleRecommendSlots = async () => {
+    const payload = { day_name: "Tuesday" };
+    const result = await recommendSlots(payload);
+    console.log("Recommended Slots:", result);
+  };
+
+  const handlePredictBottleneck = async () => {
+    const payload = {
+      queue_length: 15,
+      arrival_rate: 10.5,
+      departure_rate: 8.0,
+      time_of_day: 16,
+    };
+    const result = await predictBottleneck(payload);
+    console.log("Bottleneck Prediction:", result);
   };
 
   return (
@@ -216,6 +247,28 @@ const Dashboard = () => {
               </>
             )}
           </div>
+        </div>
+
+        {/* Test API Calls Buttons */}
+        <div className="flex space-x-4 pt-4">
+          <button
+            onClick={handlePredictWaitTime}
+            className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all duration-300"
+          >
+            Test Predict Wait Time
+          </button>
+          <button
+            onClick={handleRecommendSlots}
+            className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-500 transition-all duration-300"
+          >
+            Test Recommend Slots
+          </button>
+          <button
+            onClick={handlePredictBottleneck}
+            className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-500 transition-all duration-300"
+          >
+            Test Predict Bottleneck
+          </button>
         </div>
       </div>
     </div>

@@ -497,4 +497,38 @@ export const handleApiError = (error) => {
   return error.message || 'An unexpected error occurred.';
 };
 
+// API functions for FastAPI backend
+export const predictWaitTime = async (payload) => {
+  const response = await fetch(`${API_BASE_URL}/predict_wait_time`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+};
+
+export const recommendSlots = async (payload) => {
+  const response = await fetch(`${API_BASE_URL}/recommend_slots`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+};
+
+export const predictBottleneck = async (payload) => {
+  const response = await fetch(`${API_BASE_URL}/predict_bottleneck`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+};
+
 export default api;
