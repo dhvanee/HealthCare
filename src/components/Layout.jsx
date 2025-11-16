@@ -3,9 +3,9 @@ import Navbar from "./Navbar";
 
 const Layout = () => {
   return (
-    <div className="min-h-screen bg-background-dark text-white font-display">
+    <div className="h-screen flex flex-col bg-background-dark text-white font-display">
       <Navbar />
-      <main>
+      <main className="flex-1 overflow-hidden">
         <Outlet />
       </main>
     </div>

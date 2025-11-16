@@ -15,11 +15,26 @@ const ticketSchema = new mongoose.Schema({
     hospital: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Hospital',
-        required: [true, 'Hospital is required']
+        required: false
+    },
+    // External hospital info (for hospitals from map APIs that aren't in our database)
+    externalHospital: {
+        id: String,
+        name: String,
+        address: String,
+        phone: String,
+        location: {
+            type: {
+                type: String,
+                enum: ['Point'],
+                default: 'Point'
+            },
+            coordinates: [Number] // [longitude, latitude]
+        }
     },
     counter: {
         type: mongoose.Schema.Types.ObjectId,
-        required: [true, 'Counter is required']
+        required: false
     },
     appointmentDateTime: {
         type: Date,
@@ -259,7 +274,7 @@ ticketSchema.virtual('formattedAppointmentTime').get(function() {
 });
 
 // Pre-save middleware to generate ticket number
-ticketSchema.pre('save', async function(next) {
+ticketSchema.pre('validate', async function(next) {
     if (this.isNew && !this.ticketNumber) {
         try {
             const date = new Date();

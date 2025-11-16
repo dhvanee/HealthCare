@@ -6,6 +6,7 @@ import Hospitals from "./pages/Hospitals";
 import MyTickets from "./pages/MyTickets";
 import About from "./pages/About";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -15,8 +16,9 @@ function App() {
       <Router>
         <div className="App">
           <Routes>
-            {/* Login route - standalone without layout */}
+            {/* Auth routes - standalone without layout */}
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
             {/* Main app routes with layout */}
             <Route path="/" element={<Layout />}>

@@ -24,9 +24,9 @@ const userValidation = {
         name: commonSchemas.name.required(),
         email: commonSchemas.email.required(),
         password: commonSchemas.password.required(),
-        phone: commonSchemas.phone.required(),
-        dateOfBirth: commonSchemas.date.required(),
-        gender: commonSchemas.gender.required(),
+        phone: commonSchemas.phone.optional().allow(''),
+        dateOfBirth: commonSchemas.date.optional().allow(null, ''),
+        gender: commonSchemas.gender.optional().allow(''),
         address: Joi.object({
             street: Joi.string().trim().max(200),
             city: Joi.string().trim().max(50),
@@ -147,23 +147,40 @@ const hospitalValidation = {
 const ticketValidation = {
     // Book ticket validation
     bookTicket: Joi.object({
-        hospitalId: commonSchemas.objectId.required(),
-        counterId: commonSchemas.objectId.required(),
+        hospitalId: Joi.string().required(),
+        hospitalData: Joi.object({
+            name: Joi.string().optional(),
+            address: Joi.string().optional(),
+            phone: Joi.string().optional(),
+            location: Joi.object({
+                lat: Joi.number().optional(),
+                lng: Joi.number().optional()
+            }).optional().allow(null),
+            rating: Joi.number().optional().allow(null),
+            distance: Joi.alternatives().try(Joi.string(), Joi.number()).optional().allow(null),
+            departments: Joi.array().items(Joi.string()).optional(),
+            place_id: Joi.alternatives().try(
+                Joi.string().allow(''),
+                Joi.number(),
+                Joi.valid(null)
+            ).optional().allow(null, '')
+        }).optional(),
+        counterId: Joi.string().optional().allow('', null),
         appointmentDateTime: commonSchemas.date.required(),
-        reasonForVisit: Joi.string().trim().max(500),
-        symptoms: Joi.array().items(Joi.string().trim()),
+        reasonForVisit: Joi.string().trim().max(500).optional().allow(''),
+        symptoms: Joi.array().items(Joi.string().trim()).optional(),
         patientType: Joi.string().valid('new', 'follow_up', 'emergency').default('new'),
         priority: Joi.string().valid('low', 'normal', 'high', 'emergency').default('normal'),
         insurance: Joi.object({
             hasInsurance: Joi.boolean().default(false),
-            provider: Joi.string().trim(),
-            policyNumber: Joi.string().trim()
-        })
+            provider: Joi.string().trim().optional().allow(''),
+            policyNumber: Joi.string().trim().optional().allow('')
+        }).optional()
     }),
 
     // Get user tickets validation
     getUserTickets: Joi.object({
-        userId: commonSchemas.objectId.required(),
+        user_id: commonSchemas.objectId.required(),
         status: Joi.alternatives().try(
             Joi.string().valid('booked', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'),
             Joi.array().items(Joi.string().valid('booked', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'))
@@ -174,9 +191,8 @@ const ticketValidation = {
         limit: Joi.number().min(1).max(100).default(50)
     }),
 
-    // Update ticket status validation
+    // Update ticket status validation (ticketId comes from URL params, not body)
     updateTicketStatus: Joi.object({
-        ticketId: commonSchemas.objectId.required(),
         status: Joi.string().valid('confirmed', 'in_progress', 'completed', 'cancelled', 'no_show').required(),
         cancellationReason: Joi.string().trim().when('status', {
             is: 'cancelled',
@@ -187,7 +203,7 @@ const ticketValidation = {
             patient: Joi.string().trim(),
             staff: Joi.string().trim(),
             doctor: Joi.string().trim()
-        })
+        }).optional()
     }),
 
     // Check-in validation
@@ -314,7 +330,17 @@ const sanitize = {
 
     // Sanitize object recursively
     object: (obj) => {
-        if (typeof obj !== 'object' || obj === null) return obj;
+        if (obj === null || typeof obj !== 'object') {
+            return obj;
+        }
+
+        if (obj instanceof Date) {
+            return new Date(obj.getTime());
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map((item) => sanitize.object(item));
+        }
 
         const sanitized = {};
         for (const [key, value] of Object.entries(obj)) {

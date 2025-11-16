@@ -45,7 +45,7 @@ const Profile = () => {
     if (message.text) {
       const timer = setTimeout(() => {
         setMessage({ type: "", text: "" });
-      }, 5000);
+      }, 5004);
       return () => clearTimeout(timer);
     }
   }, [message]);

@@ -1,7 +1,5 @@
 // Authentication Service - Handles user authentication and API calls
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||
-  "http://localhost:3001/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5004/api';
 
 class AuthService {
   constructor() {
@@ -44,20 +42,18 @@ class AuthService {
       const response = await this.apiRequest("/auth/signup", {
         method: "POST",
         body: JSON.stringify({
-          firstName: userData.firstName,
-          lastName: userData.lastName,
+          name: userData.name,
           email: userData.email,
           password: userData.password,
-          phoneNumber: userData.phoneNumber,
+          phone: userData.phone,
           dateOfBirth: userData.dateOfBirth,
           gender: userData.gender,
-          address: userData.address,
         }),
       });
 
-      if (response.success) {
-        this.token = response.token;
-        this.user = response.user;
+      if (response.success && response.data) {
+        this.token = response.data.token;
+        this.user = response.data.user;
 
         localStorage.setItem("authToken", this.token);
         localStorage.setItem("user", JSON.stringify(this.user));
@@ -65,6 +61,7 @@ class AuthService {
         return {
           success: true,
           user: this.user,
+          token: this.token,
           message: response.message || "Account created successfully",
         };
       }
@@ -89,9 +86,9 @@ class AuthService {
         }),
       });
 
-      if (response.success) {
-        this.token = response.token;
-        this.user = response.user;
+      if (response.success && response.data) {
+        this.token = response.data.token;
+        this.user = response.data.user;
 
         localStorage.setItem("authToken", this.token);
         localStorage.setItem("user", JSON.stringify(this.user));
@@ -99,6 +96,7 @@ class AuthService {
         return {
           success: true,
           user: this.user,
+          token: this.token,
           message: response.message || "Login successful",
         };
       }
@@ -115,13 +113,18 @@ class AuthService {
   // User Logout
   async logout() {
     try {
-      if (this.token) {
-        await this.apiRequest("/auth/logout", {
-          method: "POST",
-        });
+      // Only try to call backend logout if we have a valid token
+      if (this.token && this.token !== 'null' && this.token !== 'undefined') {
+        try {
+          await this.apiRequest("/auth/logout", {
+            method: "POST",
+          });
+        } catch (error) {
+          console.warn("Backend logout failed, clearing local storage anyway:", error);
+        }
       }
     } catch (error) {
-      console.warn("Logout API call failed:", error);
+      console.warn("Logout process had issues:", error);
     } finally {
       this.token = null;
       this.user = null;
@@ -141,8 +144,8 @@ class AuthService {
     try {
       const response = await this.apiRequest("/auth/me");
 
-      if (response.success) {
-        this.user = response.user;
+      if (response.success && response.data) {
+        this.user = response.data;
         localStorage.setItem("user", JSON.stringify(this.user));
       }
 
@@ -268,16 +271,23 @@ class AuthService {
     return new Promise((resolve) => {
       setTimeout(() => {
         const mockUser = {
-          id: Date.now(),
-          firstName: userData.firstName,
-          lastName: userData.lastName,
+          _id: Date.now().toString(),
+          name: userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
           email: userData.email,
-          phoneNumber: userData.phoneNumber,
-          dateOfBirth: userData.dateOfBirth,
-          gender: userData.gender,
-          address: userData.address,
+          phone: userData.phone || userData.phoneNumber || '',
+          isActive: true,
+          isVerified: true,
+          role: 'patient',
           createdAt: new Date().toISOString(),
         };
+        
+        // Only add optional fields if they exist
+        if (userData.dateOfBirth) {
+          mockUser.dateOfBirth = userData.dateOfBirth;
+        }
+        if (userData.gender) {
+          mockUser.gender = userData.gender;
+        }
 
         const mockToken = "mock_token_" + Date.now();
 
@@ -304,14 +314,15 @@ class AuthService {
         // Simple validation for demo
         if (credentials.email && credentials.password) {
           const mockUser = {
-            id: 1,
-            firstName: "John",
-            lastName: "Doe",
+            _id: "1",
+            name: "John Doe",
             email: credentials.email,
-            phoneNumber: "+1 234-567-8900",
+            phone: "+1 234-567-8900",
             dateOfBirth: "1990-01-01",
             gender: "male",
-            address: "123 Main St, City, State 12345",
+            isActive: true,
+            isVerified: true,
+            role: 'patient',
             createdAt: "2023-01-01T00:00:00.000Z",
           };
 

@@ -123,16 +123,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login function
-  const login = async (credentials, useMock = true) => {
+  const login = async (credentials) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
 
     try {
-      let result;
-      if (useMock) {
-        result = await authService.mockLogin(credentials);
-      } else {
-        result = await authService.login(credentials);
-      }
+      const result = await authService.login(credentials);
 
       if (result.success) {
         dispatch({
@@ -161,16 +156,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Signup function
-  const signup = async (userData, useMock = true) => {
+  const signup = async (userData) => {
     dispatch({ type: AUTH_ACTIONS.SIGNUP_START });
 
     try {
-      let result;
-      if (useMock) {
-        result = await authService.mockSignup(userData);
-      } else {
-        result = await authService.signup(userData);
-      }
+      const result = await authService.signup(userData);
 
       if (result.success) {
         dispatch({

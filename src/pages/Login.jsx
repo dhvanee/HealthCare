@@ -21,7 +21,7 @@ const Login = () => {
     }
 
     try {
-      const result = await login({ email, password }, true); // true for mock mode
+      const result = await login({ email, password });
 
       if (result.success) {
         // Store remember me preference if needed
@@ -35,7 +35,7 @@ const Login = () => {
         setError(result.message || "Login failed");
       }
     } catch (err) {
-      setError("An unexpected error occurred");
+      setError(err.message || "An unexpected error occurred");
     }
   };
 

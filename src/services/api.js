@@ -1,8 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5004/api';
 
-// Mock authentication token for development
+// Get authentication token from localStorage
 const getAuthToken = () => {
-  return localStorage.getItem('authToken') || 'mock-jwt-token-for-development';
+  return localStorage.getItem('authToken') || null;
 };
 
 // API configuration
@@ -51,11 +51,12 @@ class ApiClient {
     try {
       const response = await fetch(requestOptions.url || fullUrl, requestOptions);
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
       return { data, status: response.status, statusText: response.statusText };
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -311,172 +312,362 @@ export const hospitalService = {
 
 // Ticket API calls
 export const ticketService = {
-  // Book a ticket
-  bookTicket: async (ticketData) => {
+  // Book a ticket/appointment
+  bookTicket: async (bookingData) => {
     try {
-      const response = await api.post('/tickets/book', ticketData);
+      console.log('[API Service] bookTicket called with:', bookingData);
+      
+      // Format the data according to backend requirements
+      const formattedData = {
+        hospitalId: bookingData.hospitalId,
+        appointmentDateTime: bookingData.appointmentDateTime, // ISO date string
+        reasonForVisit: bookingData.reasonForVisit || '',
+        symptoms: bookingData.symptoms || [],
+        patientType: bookingData.patientType || 'new', // 'new', 'follow_up', 'emergency'
+        priority: bookingData.priority || 'normal' // 'low', 'normal', 'high', 'emergency'
+      };
+      
+      // Add optional fields only if they exist
+      if (bookingData.counterId) {
+        formattedData.counterId = bookingData.counterId;
+      }
+      
+      if (bookingData.hospitalData) {
+        formattedData.hospitalData = bookingData.hospitalData;
+      }
+      
+      if (bookingData.insurance) {
+        formattedData.insurance = {
+          hasInsurance: bookingData.insurance.hasInsurance || false,
+          provider: bookingData.insurance.provider || '',
+          policyNumber: bookingData.insurance.policyNumber || ''
+        };
+      }
+      
+      console.log('[API Service] Sending to backend:', formattedData);
+
+      const response = await api.post('/tickets/book', formattedData);
       return response.data;
     } catch (error) {
       console.error('Error booking ticket:', error);
-      return {
-        success: true,
-        data: {
-          _id: 'ticket_' + Date.now(),
-          ticketNumber: 'TKT' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-          hospital: ticketData.hospitalId,
-          counter: ticketData.counterId,
-          appointmentTime: ticketData.appointmentTime,
-          estimatedWaitTime: 15,
-          status: 'confirmed',
-          queuePosition: 5,
-          createdAt: new Date().toISOString(),
-          patientInfo: ticketData.patientInfo
-        }
-      };
+      throw new Error(error.message || 'Failed to book appointment. Please try again.');
     }
   },
 
-  // Get user tickets
+  // Get user tickets with filters
   getUserTickets: async (userId, filters = {}) => {
     try {
-      const response = await api.get(`/tickets/${userId}`, { params: filters });
+      const params = {
+        status: filters.status, // string or array: 'booked', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'
+        hospital: filters.hospitalId,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        limit: filters.limit || 50,
+        page: filters.page || 1
+      };
+
+      // Remove undefined values
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+
+      const response = await api.get(`/tickets/${userId}`, { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching user tickets:', error);
-      return {
-        success: true,
-        data: [
-          {
-            _id: 'ticket1',
-            ticketNumber: 'TKT123456',
-            hospital: { name: 'City General Hospital', _id: 'hosp1' },
-            counter: { name: 'Registration Desk', _id: 'counter1' },
-            appointmentTime: new Date(Date.now() + 86400000).toISOString(),
-            status: 'confirmed',
-            queuePosition: 3,
-            estimatedWaitTime: 18
-          }
-        ],
-        total: 1,
-        page: 1,
-        totalPages: 1
-      };
+      throw new Error('Failed to fetch tickets. Please try again.');
     }
   },
 
-  // Get ticket details
+  // Get ticket details by ID
   getTicketDetails: async (ticketId) => {
     try {
       const response = await api.get(`/tickets/details/${ticketId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching ticket details:', error);
-      return {
-        success: true,
-        data: {
-          _id: ticketId,
-          ticketNumber: 'TKT123456',
-          status: 'confirmed',
-          queuePosition: 3,
-          estimatedWaitTime: 18,
-          appointmentTime: new Date(Date.now() + 86400000).toISOString(),
-          hospital: {
-            name: 'City General Hospital',
-            address: '123 Main St, City Center'
-          },
-          counter: {
-            name: 'Registration Desk',
-            department: 'General'
-          },
-          patientInfo: {
-            name: 'John Doe',
-            phone: '+1234567890',
-            emergencyContact: '+1234567891'
-          }
-        }
+      throw new Error('Failed to fetch ticket details. Please try again.');
+    }
+  },
+
+  // Update appointment date/time
+  updateAppointment: async (ticketId, appointmentData) => {
+    try {
+      const data = {
+        appointmentDateTime: appointmentData.appointmentDateTime, // ISO date string
+        reasonForVisit: appointmentData.reasonForVisit,
+        symptoms: appointmentData.symptoms || []
       };
+
+      // Remove undefined values
+      Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
+
+      const response = await api.put(`/tickets/${ticketId}/appointment`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      throw new Error(error.message || 'Failed to update appointment. Please try again.');
     }
   },
 
   // Update ticket status
-  updateTicketStatus: async (ticketId, status, reason = '') => {
+  updateTicketStatus: async (ticketId, statusData) => {
     try {
-      const response = await api.put(`/tickets/${ticketId}/status`, { status, reason });
+      const data = {
+        status: statusData.status, // 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'
+        cancellationReason: statusData.cancellationReason, // required if status is 'cancelled'
+        notes: statusData.notes || {} // { patient: '', staff: '', doctor: '' }
+      };
+
+      const response = await api.put(`/tickets/${ticketId}/status`, data);
       return response.data;
     } catch (error) {
       console.error('Error updating ticket status:', error);
-      return {
-        success: true,
-        message: `Ticket ${status} successfully`
-      };
+      throw new Error('Failed to update ticket status. Please try again.');
     }
   },
 
   // Check-in for appointment
   checkIn: async (ticketId) => {
     try {
-      const response = await api.post(`/tickets/${ticketId}/checkin`);
+      const response = await api.post(`/tickets/${ticketId}/checkin`, {});
       return response.data;
     } catch (error) {
       console.error('Error checking in:', error);
-      return {
-        success: true,
-        message: 'Checked in successfully',
-        data: {
-          checkedInAt: new Date().toISOString(),
-          updatedWaitTime: 12,
-          queuePosition: 2
-        }
+      throw new Error('Failed to check in. Please try again.');
+    }
+  },
+
+  // Rate service after appointment
+  rateService: async (ticketId, ratingData) => {
+    try {
+      const data = {
+        serviceRating: ratingData.serviceRating, // 1-5
+        doctorRating: ratingData.doctorRating, // 1-5
+        facilityRating: ratingData.facilityRating, // 1-5
+        overallRating: ratingData.overallRating, // 1-5 (required)
+        feedback: ratingData.feedback || '' // max 1000 chars
       };
+
+      const response = await api.post(`/tickets/${ticketId}/rate`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error rating service:', error);
+      throw new Error('Failed to submit rating. Please try again.');
+    }
+  },
+
+  // Cancel appointment
+  cancelAppointment: async (ticketId, cancellationReason) => {
+    try {
+      return await ticketService.updateTicketStatus(ticketId, {
+        status: 'cancelled',
+        cancellationReason: cancellationReason
+      });
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      throw new Error('Failed to cancel appointment. Please try again.');
     }
   }
 };
 
 // Auth API calls
 export const authService = {
-  // Mock login
-  login: async (email, password) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  // User login
+  login: async (credentials) => {
+    try {
+      const response = await api.post('/auth/login', {
+        email: credentials.email,
+        password: credentials.password
+      });
 
-    if (email && password) {
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      localStorage.setItem('authToken', mockToken);
-      localStorage.setItem('user', JSON.stringify({
-        id: 'user123',
-        email,
-        name: email.split('@')[0],
-        phone: '+1234567890'
-      }));
+      if (response.data.success && response.data.data) {
+        const { token, user } = response.data.data;
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('user', JSON.stringify(user));
 
-      return {
-        success: true,
-        data: {
-          token: mockToken,
-          user: {
-            id: 'user123',
-            email,
-            name: email.split('@')[0],
-            phone: '+1234567890'
-          }
-        }
-      };
-    } else {
-      throw new Error('Invalid credentials');
+        return {
+          success: true,
+          user,
+          token
+        };
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw new Error(error.message || 'Login failed. Please try again.');
     }
   },
 
-  // Mock logout
+  // User signup/registration
+  signup: async (userData) => {
+    try {
+      const response = await api.post('/auth/signup', userData);
+
+      if (response.data.success && response.data.data) {
+        const { token, user } = response.data.data;
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        return {
+          success: true,
+          user,
+          token
+        };
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Signup error:', error);
+      throw new Error(error.message || 'Registration failed. Please try again.');
+    }
+  },
+
+  // Logout
   logout: async () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    return { success: true };
+    try {
+      const token = getAuthToken();
+      // Only call backend logout if we have a valid token
+      if (token && token !== 'null' && token !== 'undefined') {
+        try {
+          await api.post('/auth/logout', {});
+        } catch (error) {
+          // If logout fails, we still want to clear local storage
+          console.warn('Backend logout failed:', error.message);
+        }
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local storage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      return { success: true };
+    }
   },
 
   // Get current user
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
+  },
+
+  // Get auth token
+  getAuthToken: () => {
+    return localStorage.getItem('authToken');
+  },
+
+  // Verify token
+  verifyToken: async () => {
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data.success && response.data.data) {
+        const user = response.data.data;
+        localStorage.setItem('user', JSON.stringify(user));
+        return {
+          success: true,
+          data: user
+        };
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      // Clear invalid token
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      throw error;
+    }
+  }
+};
+
+// ML Prediction API calls (Python Flask backend)
+const ML_API_BASE_URL = import.meta.env.VITE_ML_API_URL || 'http://localhost:5008';
+
+// Create ML API client (separate from main API)
+class MLApiClient {
+  constructor(baseURL) {
+    this.baseURL = baseURL;
+    this.timeout = 10000;
+  }
+
+  async request(method, url, data = null) {
+    const fullUrl = `${this.baseURL}${url}`;
+    
+    const requestOptions = {
+      method: method.toUpperCase(),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(this.timeout),
+    };
+
+    if (data) {
+      requestOptions.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(fullUrl, requestOptions);
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return responseData;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    }
+  }
+
+  post(url, data) {
+    return this.request('POST', url, data);
+  }
+
+  get(url) {
+    return this.request('GET', url);
+  }
+}
+
+const mlApi = new MLApiClient(ML_API_BASE_URL);
+
+// ML Prediction Service
+export const predictionService = {
+  /**
+   * Predict wait time for a given date, time, and hospital conditions
+   * @param {Object} payload - Prediction parameters
+   * @param {string} payload.date - Date in YYYY-MM-DD format
+   * @param {string} payload.time - Time in HH:MM format
+   * @param {number} payload.current_queue_length - Current queue length
+   * @param {number} payload.staff_count - Number of staff members
+   * @param {number} payload.historical_throughput - Historical throughput
+   * @param {number} payload.is_holiday - 0 or 1
+   * @returns {Promise<Object>} Prediction result with wait time and confidence interval
+   */
+  predictWaitTime: async (payload) => {
+    try {
+      const response = await mlApi.post('/predict/wait-time', payload);
+      return response;
+    } catch (error) {
+      console.error('Error predicting wait time:', error);
+      throw new Error(error.message || 'Failed to predict wait time. Please try again.');
+    }
+  },
+
+  /**
+   * Get best time slots for a given day
+   * @param {string} dayName - Day name (e.g., "Wednesday")
+   * @returns {Promise<Object>} Best slots array
+   */
+  getBestSlots: async (dayName) => {
+    try {
+      const response = await mlApi.post('/predict/best-slots', { day_name: dayName });
+      return response;
+    } catch (error) {
+      console.error('Error getting best slots:', error);
+      throw new Error(error.message || 'Failed to get best slots. Please try again.');
+    }
   }
 };
 

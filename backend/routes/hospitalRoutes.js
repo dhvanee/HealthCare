@@ -8,7 +8,9 @@ const {
     getHospitalCounters,
     searchHospitals,
     getWaitTimePrediction,
-    getRecommendedTimeSlots
+    getRecommendedTimeSlots,
+    syncExternalHospital,
+    getOrCreateHospital
 } = require('../controllers/hospitalController');
 
 const router = express.Router();
@@ -75,6 +77,28 @@ router.get('/:id/counters/:counterId/wait-time',
 router.get('/:id/counters/:counterId/recommended-slots',
     authenticate,
     getRecommendedTimeSlots
+);
+
+/**
+ * @route   POST /api/hospitals/sync
+ * @desc    Sync external hospital to database
+ * @access  Public (can be restricted to authenticated users if needed)
+ * @body    externalId, name, address, phone, location, rating, specialties, etc.
+ */
+router.post('/sync',
+    optionalAuth,
+    syncExternalHospital
+);
+
+/**
+ * @route   POST /api/hospitals/get-or-create
+ * @desc    Get hospital from DB or create if doesn't exist
+ * @access  Public
+ * @body    externalId or place_id, and other hospital data
+ */
+router.post('/get-or-create',
+    optionalAuth,
+    getOrCreateHospital
 );
 
 module.exports = router;

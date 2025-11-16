@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Ticket = require('../database/models/Ticket');
 const Hospital = require('../database/models/Hospital');
 const User = require('../database/models/User');
@@ -15,6 +16,7 @@ const bookTicket = async (req, res) => {
 
         const {
             hospitalId,
+            hospitalData, // External hospital data from map API
             counterId,
             appointmentDateTime,
             reasonForVisit,
@@ -24,40 +26,74 @@ const bookTicket = async (req, res) => {
             insurance = {}
         } = ticketData;
 
-        // Verify hospital exists
-        const hospital = await Hospital.findById(hospitalId);
+        // Normalize hospitalData.place_id to string if it exists
+        if (hospitalData && hospitalData.place_id !== undefined && hospitalData.place_id !== null) {
+            hospitalData.place_id = String(hospitalData.place_id);
+        }
+
+        let hospital = null;
+        let isExternalHospital = false;
+        
+        // Check if hospitalId is a valid MongoDB ObjectId
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(hospitalId) && 
+                                String(new mongoose.Types.ObjectId(hospitalId)) === hospitalId;
+
+        if (isValidObjectId) {
+            // Try to find hospital in our database
+            hospital = await Hospital.findById(hospitalId);
+        }
+        
+        // If not found in database or not a valid ObjectId, treat as external hospital
         if (!hospital) {
-            return res.status(404).json({
-                success: false,
-                message: 'Hospital not found'
-            });
+            isExternalHospital = true;
+            console.log('Using external hospital data');
+        } else {
+            // Verify hospital is active
+            if (!hospital.isActive) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Hospital is currently inactive'
+                });
+            }
         }
 
-        if (!hospital.isActive) {
-            return res.status(400).json({
-                success: false,
-                message: 'Hospital is currently inactive'
-            });
-        }
+        // Verify counter exists (if provided and hospital is in database)
+        let counter = null;
+        if (counterId && hospital && !isExternalHospital) {
+            counter = hospital.counters.id(counterId);
+            if (!counter) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Counter not found'
+                });
+            }
 
-        // Verify counter exists
-        const counter = hospital.counters.id(counterId);
-        if (!counter) {
-            return res.status(404).json({
-                success: false,
-                message: 'Counter not found'
-            });
-        }
-
-        if (!counter.isActive) {
-            return res.status(400).json({
-                success: false,
-                message: 'Counter is currently inactive'
-            });
+            if (!counter.isActive) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Counter is currently inactive'
+                });
+            }
         }
 
         // Validate appointment time
+        console.log('=== Backend Date Validation ===');
+        console.log('Received appointmentDateTime:', appointmentDateTime, 'Type:', typeof appointmentDateTime);
+        
         const appointmentTime = new Date(appointmentDateTime);
+        console.log('Parsed appointmentTime:', appointmentTime);
+        console.log('appointmentTime.toString():', appointmentTime.toString());
+        console.log('isNaN check:', isNaN(appointmentTime.getTime()));
+        
+        // Validate the parsed date is valid
+        if (isNaN(appointmentTime.getTime())) {
+            console.error('Invalid date received from frontend:', appointmentDateTime);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid appointment date and time provided'
+            });
+        }
+        
         const now = new Date();
         const minTime = new Date(now.getTime() + 30 * 60000); // 30 minutes from now
 
@@ -68,16 +104,18 @@ const bookTicket = async (req, res) => {
             });
         }
 
-        // Check if appointment is within counter working hours
-        const appointmentHour = appointmentTime.getHours();
-        const startHour = parseInt(counter.workingHours.start.split(':')[0]);
-        const endHour = parseInt(counter.workingHours.end.split(':')[0]);
+        // Check if appointment is within counter working hours (if counter exists)
+        if (counter) {
+            const appointmentHour = appointmentTime.getHours();
+            const startHour = parseInt(counter.workingHours.start.split(':')[0]);
+            const endHour = parseInt(counter.workingHours.end.split(':')[0]);
 
-        if (appointmentHour < startHour || appointmentHour >= endHour) {
-            return res.status(400).json({
-                success: false,
-                message: `Appointment must be between ${counter.workingHours.start} and ${counter.workingHours.end}`
-            });
+            if (appointmentHour < startHour || appointmentHour >= endHour) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Appointment must be between ${counter.workingHours.start} and ${counter.workingHours.end}`
+                });
+            }
         }
 
         // Check for existing appointments at the same time
@@ -98,33 +136,41 @@ const bookTicket = async (req, res) => {
         }
 
         // Get wait time prediction
-        let estimatedWaitTime = counter.averageServiceTime * counter.currentQueueLength;
+        // Use static queue length for ML model input (default: 5 if counter doesn't exist)
+        const staticQueueLength = counter ? counter.currentQueueLength : 5;
+        let estimatedWaitTime = counter ? counter.averageServiceTime * staticQueueLength : 15; // Default 15 minutes for external hospitals
 
-        try {
-            const prediction = await mlService.predictWaitTime({
-                hospitalId,
-                counterId,
-                currentQueueLength: counter.currentQueueLength,
-                timeOfDay: appointmentTime.getHours(),
-                dayOfWeek: appointmentTime.getDay(),
-                counterType: counter.type,
-                doctorAvailable: true,
-                weatherCondition: 'clear',
-                isHoliday: isHoliday(appointmentTime)
-            });
+        // Always try to get ML prediction if we have counter info, otherwise use static values
+        if (counter) {
+            try {
+                const prediction = await mlService.predictWaitTime({
+                    hospitalId,
+                    counterId,
+                    currentQueueLength: staticQueueLength, // Use static queue length
+                    timeOfDay: appointmentTime.getHours(),
+                    dayOfWeek: appointmentTime.getDay(),
+                    counterType: counter.type,
+                    doctorAvailable: true,
+                    weatherCondition: 'clear',
+                    isHoliday: isHoliday(appointmentTime)
+                });
 
-            if (prediction.success) {
-                estimatedWaitTime = prediction.waitTime;
+                if (prediction.success) {
+                    estimatedWaitTime = prediction.waitTime;
+                }
+            } catch (predictionError) {
+                console.error('Prediction error during booking:', predictionError);
+                // Fallback to static calculation
+                estimatedWaitTime = counter.averageServiceTime * staticQueueLength;
             }
-        } catch (predictionError) {
-            console.error('Prediction error during booking:', predictionError);
+        } else {
+            // For external hospitals without counter, use a static default wait time
+            estimatedWaitTime = 15; // 15 minutes default
         }
 
         // Create ticket
-        const ticket = new Ticket({
+        const ticketPayload = {
             user: userId,
-            hospital: hospitalId,
-            counter: counterId,
             appointmentDateTime: appointmentTime,
             reasonForVisit,
             symptoms,
@@ -133,20 +179,44 @@ const bookTicket = async (req, res) => {
             estimatedWaitTime,
             insurance: {
                 hasInsurance: insurance.hasInsurance || false,
-                provider: insurance.provider,
-                policyNumber: insurance.policyNumber
+                provider: insurance.provider || '',
+                policyNumber: insurance.policyNumber || ''
             },
             consultationFee: {
-                amount: getConsultationFee(counter.type, patientType),
+                amount: counter ? getConsultationFee(counter.type, patientType) : 0,
                 currency: 'INR'
             }
-        });
+        };
+        
+        // Add hospital reference based on type
+        if (isExternalHospital) {
+            // Store external hospital data
+            ticketPayload.externalHospital = {
+                id: hospitalId,
+                name: hospitalData?.name || 'Unknown Hospital',
+                address: hospitalData?.address || '',
+                phone: hospitalData?.phone || hospitalId,
+                location: hospitalData?.location || undefined
+            };
+        } else {
+            // Reference to internal hospital
+            ticketPayload.hospital = hospitalId;
+        }
+        
+        // Only add counter if we have a valid internal counter reference
+        if (!isExternalHospital && counter && counterId) {
+            ticketPayload.counter = counterId;
+        }
+        
+        const ticket = new Ticket(ticketPayload);
 
         await ticket.save();
 
-        // Update counter queue length
-        counter.currentQueueLength += 1;
-        await hospital.save();
+        // Update counter queue length (if counter exists and hospital is internal)
+        if (counter && !isExternalHospital) {
+            counter.currentQueueLength += 1;
+            await hospital.save();
+        }
 
         // Populate ticket data for response
         await ticket.populate([
@@ -165,15 +235,15 @@ const bookTicket = async (req, res) => {
             message: 'Ticket booked successfully',
             data: {
                 ticket,
-                counter: {
+                counter: counter ? {
                     name: counter.name,
                     type: counter.type,
                     department: counter.department
-                },
+                } : null,
                 recommendations: {
                     arrivalTime: new Date(appointmentTime.getTime() - 15 * 60000).toISOString(),
-                    estimatedServiceTime: counter.averageServiceTime,
-                    documentsNeeded: getRequiredDocuments(counter.type, patientType)
+                    estimatedServiceTime: counter?.averageServiceTime || 0,
+                    documentsNeeded: getRequiredDocuments(counter?.type || 'General', patientType)
                 }
             }
         });
@@ -248,7 +318,7 @@ const getUserTickets = async (req, res) => {
 
         const [tickets, total] = await Promise.all([
             Ticket.find(query)
-                .populate('hospital', 'name address phone type')
+                .populate('hospital', 'name address phone type counters')
                 .sort({ appointmentDateTime: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
@@ -259,9 +329,12 @@ const getUserTickets = async (req, res) => {
         // Add counter information and additional computed fields
         const ticketsWithDetails = tickets.map(ticket => {
             const hospital = ticket.hospital;
-            const counter = hospital.counters?.find(c => c._id.toString() === ticket.counter.toString());
+            const counter = hospital?.counters?.find(c => 
+                ticket.counter && c._id.toString() === ticket.counter.toString()
+            );
 
-            return {
+            // Build the ticket response with proper hospital data
+            const ticketResponse = {
                 ...ticket,
                 counter: counter ? {
                     id: counter._id,
@@ -274,6 +347,11 @@ const getUserTickets = async (req, res) => {
                 timeUntilAppointment: getTimeUntilAppointment(ticket.appointmentDateTime),
                 status: getTicketStatus(ticket)
             };
+
+            // If this is an external hospital, ensure it's properly included in response
+            // (externalHospital field is already in ticket from .lean())
+            
+            return ticketResponse;
         });
 
         res.json({
@@ -376,6 +454,134 @@ const getTicketDetails = async (req, res) => {
 };
 
 /**
+ * Update Appointment Date/Time Controller
+ * PUT /api/tickets/:id/appointment
+ */
+const updateAppointment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { appointmentDateTime, reasonForVisit, symptoms } = req.body;
+
+        const ticket = await Ticket.findById(id)
+            .populate('hospital', 'counters');
+
+        if (!ticket) {
+            return res.status(404).json({
+                success: false,
+                message: 'Ticket not found'
+            });
+        }
+
+        // Check permissions
+        if (req.user._id.toString() !== ticket.user.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied'
+            });
+        }
+
+        // Only allow modification if ticket is booked or confirmed
+        if (!['booked', 'confirmed'].includes(ticket.status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot modify appointment with status: ${ticket.status}`
+            });
+        }
+
+        // Validate appointment time if provided
+        if (appointmentDateTime) {
+            const appointmentTime = new Date(appointmentDateTime);
+            
+            if (isNaN(appointmentTime.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid appointment date and time provided'
+                });
+            }
+            
+            const now = new Date();
+            const minTime = new Date(now.getTime() + 30 * 60000); // 30 minutes from now
+
+            if (appointmentTime < minTime) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Appointment time must be at least 30 minutes from now'
+                });
+            }
+
+            // Check for existing appointments at the same time
+            const existingAppointment = await Ticket.findOne({
+                user: req.user._id,
+                _id: { $ne: id }, // Exclude current ticket
+                appointmentDateTime: {
+                    $gte: new Date(appointmentTime.getTime() - 30 * 60000),
+                    $lte: new Date(appointmentTime.getTime() + 30 * 60000)
+                },
+                status: { $in: ['booked', 'confirmed', 'in_progress'] }
+            });
+
+            if (existingAppointment) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'You already have an appointment around this time'
+                });
+            }
+
+            ticket.appointmentDateTime = appointmentTime;
+        }
+
+        // Update other fields if provided
+        if (reasonForVisit !== undefined) {
+            ticket.reasonForVisit = reasonForVisit;
+        }
+
+        if (symptoms !== undefined) {
+            ticket.symptoms = Array.isArray(symptoms) ? symptoms : [];
+        }
+
+        await ticket.save();
+
+        await ticket.populate([
+            {
+                path: 'user',
+                select: 'name phone email'
+            },
+            {
+                path: 'hospital',
+                select: 'name address phone'
+            }
+        ]);
+
+        res.json({
+            success: true,
+            message: 'Appointment updated successfully',
+            data: { ticket }
+        });
+
+    } catch (error) {
+        console.error('Update appointment error:', error);
+
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => ({
+                field: err.path,
+                message: err.message
+            }));
+
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update appointment'
+        });
+    }
+};
+
+/**
  * Update Ticket Status Controller
  * PUT /api/tickets/:id/status
  */
@@ -423,11 +629,13 @@ const updateTicketStatus = async (req, res) => {
             ticket.cancelledAt = new Date();
             ticket.cancelledBy = req.user._id;
 
-            // Update counter queue length
-            const counter = ticket.hospital.counters.id(ticket.counter);
-            if (counter && counter.currentQueueLength > 0) {
-                counter.currentQueueLength -= 1;
-                await ticket.hospital.save();
+            // Update counter queue length (only for internal hospitals)
+            if (ticket.hospital && ticket.counter) {
+                const counter = ticket.hospital.counters?.id(ticket.counter);
+                if (counter && counter.currentQueueLength > 0) {
+                    counter.currentQueueLength -= 1;
+                    await ticket.hospital.save();
+                }
             }
         }
 
@@ -735,6 +943,7 @@ module.exports = {
     bookTicket,
     getUserTickets,
     getTicketDetails,
+    updateAppointment,
     updateTicketStatus,
     checkIn,
     rateService

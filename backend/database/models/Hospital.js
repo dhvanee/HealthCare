@@ -66,7 +66,7 @@ const hospitalSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: [true, 'Email is required'],
+        required: function() { return !this.isExternal; }, // Not required for external hospitals
         lowercase: true,
         trim: true,
         match: [
@@ -130,14 +130,16 @@ const hospitalSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        required: [true, 'Hospital type is required'],
-        enum: ['Government', 'Private', 'Semi-Government', 'Charitable'],
+        required: function() { return !this.isExternal; }, // Not required for external hospitals
+        enum: ['Government', 'Private', 'Semi-Government', 'Charitable', 'general'],
+        default: 'general',
         trim: true
     },
     category: {
         type: String,
-        required: [true, 'Hospital category is required'],
-        enum: ['Primary', 'Secondary', 'Tertiary', 'Specialty'],
+        required: function() { return !this.isExternal; }, // Not required for external hospitals
+        enum: ['Primary', 'Secondary', 'Tertiary', 'Specialty', 'multi_specialty'],
+        default: 'multi_specialty',
         trim: true
     },
     specialties: [{
@@ -274,8 +276,9 @@ const hospitalSchema = new mongoose.Schema({
     },
     registrationNumber: {
         type: String,
-        required: [true, 'Registration number is required'],
+        required: function() { return !this.isExternal; }, // Not required for external hospitals
         unique: true,
+        sparse: true, // Allow null values for external hospitals
         trim: true
     },
     establishedYear: {
@@ -292,6 +295,39 @@ const hospitalSchema = new mongoose.Schema({
         type: Number,
         default: 0,
         min: 0
+    },
+    // External hospital data fields (for hospitals from Maps API)
+    isExternal: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    externalData: {
+        source: {
+            type: String,
+            enum: ['maps_api', 'google_places', 'openstreetmap', 'manual'],
+            default: 'manual'
+        },
+        place_id: {
+            type: String,
+            sparse: true,
+            index: true
+        },
+        externalId: {
+            type: String,
+            sparse: true,
+            index: true
+        },
+        rating: {
+            type: Number,
+            min: 0,
+            max: 5
+        },
+        originalAddress: String,
+        lastSynced: {
+            type: Date,
+            default: Date.now
+        }
     }
 }, {
     timestamps: true,

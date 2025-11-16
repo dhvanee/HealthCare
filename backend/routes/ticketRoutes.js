@@ -6,6 +6,7 @@ const {
     bookTicket,
     getUserTickets,
     getTicketDetails,
+    updateAppointment,
     updateTicketStatus,
     checkIn,
     rateService
@@ -45,6 +46,16 @@ router.get('/:user_id',
 router.get('/details/:id',
     authenticate,
     getTicketDetails
+);
+
+/**
+ * @route   PUT /api/tickets/:id/appointment
+ * @desc    Update appointment date/time and details
+ * @access  Private
+ */
+router.put('/:id/appointment',
+    authenticate,
+    updateAppointment
 );
 
 /**

@@ -1,0 +1,14 @@
+# Core build tools (install first)
+setuptools>=65.0.0
+wheel>=0.38.0
+
+# Flask and web framework
+flask==3.0.0
+flask-cors==4.0.0
+
+# Scientific computing
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn==1.6.1  # Match model version to fix timeslot model compatibility
+lightgbm>=4.0.0
+

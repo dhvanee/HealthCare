@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: [true, 'Phone number is required'],
+        required: false,
         match: [
             /^\+?[\d\s\-\(\)]+$/,
             'Please enter a valid phone number'
@@ -36,12 +36,12 @@ const userSchema = new mongoose.Schema({
     },
     dateOfBirth: {
         type: Date,
-        required: [true, 'Date of birth is required']
+        required: false
     },
     gender: {
         type: String,
         enum: ['male', 'female', 'other'],
-        required: [true, 'Gender is required']
+        required: false
     },
     address: {
         street: String,

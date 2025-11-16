@@ -7,6 +7,7 @@ import {
   getNearbyHospitals,
   getNearbyHospitalsWithDebug,
 } from "../../services/hospitalService";
+import { predictionService } from "../../services/api";
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -121,6 +122,8 @@ const MapWithHospitals = ({
   const [mapCenter] = useState([37.7749, -122.4194]);
   const [mapZoom] = useState(13);
   const [useRealData, setUseRealData] = useState(true);
+  const [hospitalWaitTimes, setHospitalWaitTimes] = useState({});
+  const [predictingWaitTime, setPredictingWaitTime] = useState({});
 
   const generateNearbyHospitals = useCallback((lat, lng) => {
     return sampleHospitals.map((hospital, index) => ({
@@ -142,7 +145,7 @@ const MapWithHospitals = ({
         console.log(`Fetching hospitals for coordinates: ${lat}, ${lng}`);
 
         const hospitalData = await getNearbyHospitalsWithDebug(lat, lng, {
-          radius: 5000, // 5km radius
+          radius: 5004, // 5km radius
           useDemo: !useRealData,
           forceRealData: useRealData,
           maxResults: 15,
@@ -246,12 +249,53 @@ const MapWithHospitals = ({
   }, [searchResults]);
 
   const handleHospitalClick = useCallback(
-    (hospital) => {
+    async (hospital) => {
       if (onHospitalSelect) {
         onHospitalSelect(hospital);
       }
+      
+      // Predict wait time for selected hospital
+      if (hospital && !hospitalWaitTimes[hospital.id]) {
+        setPredictingWaitTime(prev => ({ ...prev, [hospital.id]: true }));
+        
+        try {
+          const now = new Date();
+          const date = now.toISOString().split('T')[0];
+          const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+          
+          // Static values as per requirements
+          const predictionPayload = {
+            date,
+            time,
+            current_queue_length: 12, // Static
+            staff_count: 3, // Static
+            historical_throughput: 6.2, // Static
+            is_holiday: 0
+          };
+          
+          const result = await predictionService.predictWaitTime(predictionPayload);
+          
+          if (result.success) {
+            setHospitalWaitTimes(prev => ({
+              ...prev,
+              [hospital.id]: {
+                minutes: result.predicted_wait_time_minutes,
+                confidence: result.confidence_interval
+              }
+            }));
+          }
+        } catch (error) {
+          console.error('Error predicting wait time for hospital:', error);
+        } finally {
+          setPredictingWaitTime(prev => {
+            const newState = { ...prev };
+            delete newState[hospital.id];
+            return newState;
+          });
+        }
+      }
     },
-    [onHospitalSelect],
+    [onHospitalSelect, hospitalWaitTimes],
   );
 
   if (loading) {
@@ -368,7 +412,23 @@ const MapWithHospitals = ({
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <div>
                       <div className="text-primary font-semibold">
-                        Wait Time: {hospital.waitTime}
+                        {predictingWaitTime[hospital.id] ? (
+                          <span className="flex items-center">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-2"></div>
+                            Predicting...
+                          </span>
+                        ) : hospitalWaitTimes[hospital.id] ? (
+                          <>
+                            Wait Time: {Math.round(hospitalWaitTimes[hospital.id].minutes)} min
+                            {hospitalWaitTimes[hospital.id].confidence && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                ({Math.round(hospitalWaitTimes[hospital.id].confidence.lower_bound)}-{Math.round(hospitalWaitTimes[hospital.id].confidence.upper_bound)} min)
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>Wait Time: {hospital.waitTime}</>
+                        )}
                       </div>
                       <div className="text-gray-500">
                         Distance: {hospital.distance}

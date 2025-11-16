@@ -138,10 +138,10 @@ function generateWaitTime(type) {
  * Fetch hospitals from OpenStreetMap Overpass API
  * @param {number} lat - User latitude
  * @param {number} lng - User longitude
- * @param {number} radius - Search radius in meters (default: 5000)
+ * @param {number} radius - Search radius in meters (default: 5004)
  * @returns {Promise<Array>} Array of hospitals
  */
-export async function fetchHospitalsFromOSM(lat, lng, radius = 5000) {
+export async function fetchHospitalsFromOSM(lat, lng, radius = 5004) {
   const query = `
     [out:json][timeout:30];
     (
@@ -263,14 +263,14 @@ export async function fetchHospitalsFromOSM(lat, lng, radius = 5000) {
  * @param {number} lat - User latitude
  * @param {number} lng - User longitude
  * @param {string} apiKey - Google Places API key
- * @param {number} radius - Search radius in meters (default: 5000)
+ * @param {number} radius - Search radius in meters (default: 5004)
  * @returns {Promise<Array>} Array of hospitals
  */
 export async function fetchHospitalsFromGoogle(
   lat,
   lng,
   apiKey,
-  radius = 5000,
+  radius = 5004,
 ) {
   if (!apiKey) {
     throw new Error("Google Places API key is required");
@@ -388,9 +388,9 @@ export async function getNearbyHospitals(lat, lng, options = {}) {
       console.log(`OpenStreetMap API returned ${hospitals.length} hospitals`);
 
       // If still no results, try with a larger radius
-      if (hospitals.length === 0 && radius < 15000) {
+      if (hospitals.length === 0 && radius < 15004) {
         console.log("No hospitals found, trying with larger radius...");
-        hospitals = await fetchHospitalsFromOSM(lat, lng, 15000);
+        hospitals = await fetchHospitalsFromOSM(lat, lng, 15004);
         console.log(
           `OpenStreetMap API with larger radius returned ${hospitals.length} hospitals`,
         );

@@ -4,6 +4,8 @@ import {
   getNearbyHospitalsWithDebug,
 } from "../services/hospitalService";
 import { useAuth } from "../context/AuthContext";
+import BookingModal from "../components/booking/BookingModal";
+import { storeHospitalWithSync } from "../services/hospitalCacheService";
 
 const Hospitals = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -12,6 +14,12 @@ const Hospitals = () => {
   const [error, setError] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const { user } = useAuth();
+  
+  // Booking modal state
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedHospital, setSelectedHospital] = useState(null);
+  const [selectedCounter, setSelectedCounter] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
 
   // Get user's current location
   useEffect(() => {
@@ -110,6 +118,75 @@ const Hospitals = () => {
     if (minutes <= 35)
       return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
     return "bg-red-500/20 text-red-400 border-red-500/30";
+  };
+
+  // Generate available time slots (mock data for now)
+  const generateTimeSlots = () => {
+    const slots = [];
+    const times = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', 
+                   '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'];
+    
+    times.forEach(time => {
+      slots.push({
+        time,
+        waitTime: Math.floor(Math.random() * 30) + 5,
+        availability: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)]
+      });
+    });
+    
+    return slots;
+  };
+
+  // Handle book now button click
+  const handleBookNow = async (hospital) => {
+    try {
+      // Store hospital data with hybrid caching (localStorage + DB sync)
+      const syncedHospital = await storeHospitalWithSync(hospital);
+      
+      if (!syncedHospital) {
+        setError('Failed to prepare booking. Please try again.');
+        return;
+      }
+      
+      // Ensure hospital has proper ID fields
+      const hospitalId = syncedHospital._id || syncedHospital.id || syncedHospital.place_id;
+      const hospitalWithId = {
+        ...hospital,
+        ...syncedHospital,
+        _id: hospitalId,
+        id: hospitalId
+      };
+      
+      setSelectedHospital(hospitalWithId);
+      
+      // Set a default counter (you may want to let users choose from available counters)
+      setSelectedCounter({
+        _id: hospital.counters?.[0]?._id || 'default-counter-' + Date.now(),
+        name: hospital.counters?.[0]?.name || 'General OPD',
+        type: hospital.counters?.[0]?.type || 'OPD'
+      });
+      
+      // Generate available time slots
+      setAvailableSlots(generateTimeSlots());
+      
+      setIsBookingModalOpen(true);
+    } catch (error) {
+      console.error('Error preparing booking:', error);
+      setError('Failed to prepare booking. Please try again.');
+    }
+  };
+
+  // Handle booking success
+  const handleBookingSuccess = (bookingData) => {
+    // You can show a success toast or notification here
+  };
+
+  // Close booking modal
+  const closeBookingModal = () => {
+    setIsBookingModalOpen(false);
+    setSelectedHospital(null);
+    setSelectedCounter(null);
+    setAvailableSlots([]);
   };
 
   // Loading state
@@ -258,7 +335,10 @@ const Hospitals = () => {
               </div>
 
               <div className="flex gap-3">
-                <button className="flex-1 bg-primary hover:bg-primary/90 text-background-dark font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-lg shadow-primary/20">
+                <button 
+                  onClick={() => handleBookNow(hospital)}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-background-dark font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-lg shadow-primary/20"
+                >
                   Book Now
                 </button>
                 <button
@@ -329,6 +409,16 @@ const Hospitals = () => {
           </p>
         </div>
       )}
+      
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={closeBookingModal}
+        hospital={selectedHospital}
+        counter={selectedCounter}
+        onBookingSuccess={handleBookingSuccess}
+        availableSlots={availableSlots}
+      />
     </div>
   );
 };

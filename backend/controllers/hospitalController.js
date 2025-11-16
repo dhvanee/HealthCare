@@ -546,11 +546,207 @@ function isHoliday(date) {
     return holidays.includes(monthDay);
 }
 
+/**
+ * Sync External Hospital to Database
+ * POST /api/hospitals/sync
+ * Saves external hospital data (from Maps API) to database for future reference
+ */
+const syncExternalHospital = async (req, res) => {
+    try {
+        const hospitalData = sanitize.object(req.body);
+        
+        const {
+            externalId, // place_id or other unique identifier
+            name,
+            address,
+            phone,
+            location, // { lat, lng }
+            rating,
+            specialties,
+            place_id,
+            formatted_address,
+            vicinity,
+            geometry
+        } = hospitalData;
+
+        // Validate required fields
+        if (!name || !externalId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Hospital name and external ID are required'
+            });
+        }
+
+        // Check if hospital already exists by external ID
+        let hospital = await Hospital.findOne({ 
+            'externalData.place_id': externalId 
+        });
+
+        if (hospital) {
+            // Hospital already exists, return it
+            return res.json({
+                success: true,
+                message: 'Hospital already exists',
+                data: {
+                    hospital,
+                    isNew: false
+                }
+            });
+        }
+
+        // Extract coordinates from various possible formats
+        let coordinates = null;
+        if (location && location.lat && location.lng) {
+            coordinates = [location.lng, location.lat]; // MongoDB format: [lng, lat]
+        } else if (geometry && geometry.location) {
+            const geoLoc = geometry.location;
+            coordinates = [
+                geoLoc.lng || geoLoc.longitude,
+                geoLoc.lat || geoLoc.latitude
+            ];
+        }
+
+        if (!coordinates || !coordinates[0] || !coordinates[1]) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid location coordinates are required'
+            });
+        }
+
+        // Parse address into components (best effort)
+        const addressStr = address || formatted_address || vicinity || '';
+        const addressParts = addressStr.split(',').map(s => s.trim());
+        
+        // Create new hospital entry for external hospital
+        const newHospitalData = {
+            name: name.trim(),
+            email: `info@${name.toLowerCase().replace(/\s+/g, '')}.com`, // Placeholder
+            phone: phone || 'N/A',
+            address: {
+                street: addressParts[0] || 'N/A',
+                city: addressParts[1] || 'Unknown',
+                state: addressParts[2] || 'Unknown',
+                zipCode: '000000',
+                country: 'Unknown'
+            },
+            location: {
+                type: 'Point',
+                coordinates: coordinates
+            },
+            type: 'general',
+            category: 'multi_specialty',
+            isActive: true,
+            isExternal: true, // Flag to indicate this is from external source
+            externalData: {
+                source: 'maps_api',
+                place_id: place_id || externalId,
+                externalId: externalId,
+                rating: rating || null,
+                originalAddress: addressStr
+            },
+            specialties: specialties || ['General Medicine'],
+            counters: [], // External hospitals don't have counter data initially
+            operatingHours: {
+                monday: { open: '08:00', close: '20:00', is24Hours: false },
+                tuesday: { open: '08:00', close: '20:00', is24Hours: false },
+                wednesday: { open: '08:00', close: '20:00', is24Hours: false },
+                thursday: { open: '08:00', close: '20:00', is24Hours: false },
+                friday: { open: '08:00', close: '20:00', is24Hours: false },
+                saturday: { open: '08:00', close: '18:00', is24Hours: false },
+                sunday: { open: '09:00', close: '17:00', is24Hours: false }
+            }
+        };
+
+        hospital = new Hospital(newHospitalData);
+        await hospital.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'External hospital synced successfully',
+            data: {
+                hospital,
+                isNew: true
+            }
+        });
+
+    } catch (error) {
+        console.error('Sync external hospital error:', error);
+        
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to sync external hospital',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get or Create External Hospital
+ * POST /api/hospitals/get-or-create
+ * Retrieves hospital from DB if exists, otherwise creates it
+ */
+const getOrCreateHospital = async (req, res) => {
+    try {
+        const hospitalData = sanitize.object(req.body);
+        const { externalId, place_id } = hospitalData;
+        
+        const searchId = externalId || place_id;
+        
+        if (!searchId) {
+            return res.status(400).json({
+                success: false,
+                message: 'External ID or place_id is required'
+            });
+        }
+
+        // Try to find existing hospital
+        let hospital = await Hospital.findOne({
+            $or: [
+                { 'externalData.place_id': searchId },
+                { 'externalData.externalId': searchId }
+            ]
+        });
+
+        if (hospital) {
+            return res.json({
+                success: true,
+                message: 'Hospital found',
+                data: {
+                    hospital,
+                    isNew: false
+                }
+            });
+        }
+
+        // If not found, create it using syncExternalHospital logic
+        return syncExternalHospital(req, res);
+
+    } catch (error) {
+        console.error('Get or create hospital error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve or create hospital',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getNearbyHospitals,
     getHospitalDetails,
     getHospitalCounters,
     searchHospitals,
     getWaitTimePrediction,
-    getRecommendedTimeSlots
+    getRecommendedTimeSlots,
+    syncExternalHospital,
+    getOrCreateHospital
 };
